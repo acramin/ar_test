@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Caixa AR</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.2/aframe/build/aframe-ar.min.js"></script>
+    <style>
+      body { margin: 0; overflow: hidden; }
+      #msg {
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-family: sans-serif;
+        font-size: 1.2em;
+        background: rgba(0,0,0,0.6);
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="msg">Aponte a câmera para o marcador para ver a senha!</div>
+
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false;"
+      vr-mode-ui="enabled: false"
+    >
+      <!-- Marcador padrão (Hiro) -->
+      <a-marker preset="hiro">
+        <!-- Texto com a senha -->
+        <a-entity
+          text="value: SENHA: 4821; color: red; align: center; width: 6"
+          position="0 0.5 0"
+        ></a-entity>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
