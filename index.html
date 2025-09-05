@@ -2,24 +2,176 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Caça a Lata</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Bull AR Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            background-color: #000;
+            background: linear-gradient(135deg, #000000 0%, #2b2b2b 100%);
             color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
             touch-action: none;
         }
         
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            position: relative;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo img {
+            height: 80px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #ff0000 0%, #ff9900 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+        
+        .ar-container {
+            position: relative;
+            width: 100%;
+            height: 60vh;
+            margin: 20px auto;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .ar-demo-content {
+            text-align: center;
+            z-index: 2;
+        }
+        
+        .ar-demo-content h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #ff9900;
+        }
+        
+        .ar-demo-content p {
+            max-width: 80%;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .instructions h2 {
+            margin-bottom: 15px;
+            color: #ff9900;
+        }
+        
+        .steps {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .step {
+            width: 30%;
+            min-width: 250px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 153, 0, 0.1);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            border-radius: 50%;
+            background: #ff9900;
+            color: black;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .cta {
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(90deg, #ff0000 0%, #ff9900 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 153, 0, 0.4);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 153, 0, 0.6);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        /* AR Camera and Game Overlay Styles */
         #camera-container {
             position: fixed;
             top: 0;
@@ -27,6 +179,7 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+            display: none;
         }
         
         #camera-video {
@@ -45,6 +198,7 @@
             width: 100%;
             height: 100%;
             z-index: 2;
+            display: none;
         }
         
         #ui-overlay {
@@ -55,7 +209,7 @@
             height: 100%;
             z-index: 3;
             pointer-events: none;
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
@@ -63,7 +217,7 @@
         }
         
         #instructions {
-            background: linear-gradient(135deg, rgba(110, 72, 170, 0.8), rgba(157, 80, 187, 0.8));
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.8), rgba(255, 153, 0, 0.8));
             padding: 15px 20px;
             border-radius: 20px;
             text-align: center;
@@ -90,6 +244,7 @@
             height: 40px;
             z-index: 4;
             pointer-events: none;
+            display: none;
         }
         
         .reticle-circle {
@@ -98,7 +253,7 @@
             height: 100%;
             border: 2px solid rgba(255, 255, 255, 0.8);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(110, 72, 170, 0.8);
+            box-shadow: 0 0 10px rgba(255, 153, 0, 0.8);
         }
         
         .reticle-dot {
@@ -117,7 +272,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) scale(0);
-            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            background: linear-gradient(135deg, #ff0000, #ff9900);
             padding: 30px;
             border-radius: 20px;
             text-align: center;
@@ -146,7 +301,7 @@
         
         #play-again {
             background-color: white;
-            color: #6e48aa;
+            color: #ff0000;
             border: none;
             padding: 12px 25px;
             border-radius: 50px;
@@ -167,153 +322,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #000;
+            background: linear-gradient(135deg, #000000 0%, #2b2b2b 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
-        }
-        
-        #welcome-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #6e48aa, #9d50bb);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 99;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        #welcome-screen.hidden {
-            display: none;
-        }
-        
-        .welcome-content {
-            max-width: 400px;
-            width: 100%;
-        }
-        
-        .welcome-title {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            opacity: 0.9;
-        }
-        
-        .welcome-instructions {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .welcome-instructions h3 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #fff;
-        }
-        
-        .instruction-list {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-        }
-        
-        .instruction-list li {
-            margin-bottom: 12px;
-            padding-left: 30px;
-            position: relative;
-            font-size: 1rem;
-            line-height: 1.4;
-        }
-        
-        .instruction-list li:before {
-            content: "📱";
-            position: absolute;
-            left: 0;
-            top: 0;
-        }
-        
-        .instruction-list li:nth-child(2):before {
-            content: "👀";
-        }
-        
-        .instruction-list li:nth-child(3):before {
-            content: "👆";
-        }
-        
-        .instruction-list li:nth-child(4):before {
-            content: "🎉";
-        }
-        
-        .start-game-btn {
-            background: rgba(255, 255, 255, 0.9);
-            color: #6e48aa;
-            border: none;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .start-game-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .start-game-btn:active {
-            transform: translateY(0);
-        }
-        
-        .loader {
-            width: 60px;
-            height: 60px;
-            border: 5px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            border-top: 5px solid #9d50bb;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .permission-btn {
-            background: linear-gradient(135deg, #6e48aa, #9d50bb);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 10px;
-            transition: transform 0.2s, opacity 0.2s;
-        }
-        
-        .permission-btn:active {
-            transform: scale(0.95);
-            opacity: 0.8;
         }
         
         .camera-switch {
@@ -325,7 +339,7 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(5px);
@@ -345,19 +359,224 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            background: radial-gradient(circle, rgba(255,153,0,0.8) 0%, rgba(255,153,0,0) 70%);
             opacity: 0;
             pointer-events: none;
             z-index: 5;
+        }
+        
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top: 5px solid #ff9900;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         @keyframes hitAnimation {
             0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
             100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
         }
+        
+        .permission-btn {
+            background: linear-gradient(135deg, #ff0000, #ff9900);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        .permission-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        
+        /* AR elements for visual design */
+        .redbull-can {
+            width: 40px;
+            height: 100px;
+            background: linear-gradient(90deg, #ff0000 0%, #ff9900 100%);
+            border-radius: 5px;
+            position: absolute;
+        }
+        
+        .redbull-can:before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 5px;
+            right: 5px;
+            bottom: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .redbull-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #ff0000;
+            font-size: 10px;
+            text-align: center;
+        }
+        
+        .destination {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 153, 0, 0.3);
+            border: 2px dashed #ff9900;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        /* Demo AR elements */
+        .demo-can-1 {
+            top: 30%;
+            left: 20%;
+        }
+        
+        .demo-can-2 {
+            top: 50%;
+            left: 35%;
+        }
+        
+        .demo-can-3 {
+            top: 40%;
+            left: 50%;
+        }
+        
+        .demo-can-4 {
+            top: 60%;
+            left: 65%;
+        }
+        
+        .demo-destination {
+            top: 45%;
+            right: 15%;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .step {
+                width: 100%;
+            }
+            
+            .ar-container {
+                height: 50vh;
+            }
+            
+            .demo-can-1, .demo-can-2, .demo-can-3, .demo-can-4 {
+                display: none;
+            }
+            
+            .demo-destination {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 20px auto;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Landing Page -->
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNDAgNjAiPjxwYXRoIGZpbGw9IiNmZjAwMDAiIGQ9Ik0xMDMuNCAyNC4zaC0xMHYtNi40aDEwYzIuMyAwIDQuMSAwLjQgNS40IDEuMSAxLjIgMC43IDIuMSAxLjcgMi43IDIuOSAwLjYgMS4yIDAuOSAyLjcgMC45IDQuNCAwIDEuNy0wLjMgMy4xLTAuOSA0LjItMC42IDEuMS0xLjUgMi0yLjcgMi42LTEuMiAwLjYtMi45IDEtNS4xIDFoLTMuN3YtNC44aDMuMWMwLjkgMCAxLjUtMC4yIDEuOS0wLjUgMC40LTAuMyAwLjYtMC44IDAuNi0xLjQgMC0wLjYtMC4yLTEuMS0wLjYtMS40LTAuNC0wLjMtMS0wLjUtMS45LTAuNXptMTEuMi0yLjRoNC44YzAuMS0xLjEgMC41LTEuOSAxLjItMi41IDAuNy0wLjYgMS43LTAuOSAzLTAuOXMyLjMgMC4zIDMgMC45YzAuNyAwLjYgMS4xIDEuNCAxLjIgMi41aDQuOGMtMC4yLTIuMi0xLjEtMy45LTIuNi01LTEuNi0xLTQuMS0xLjYtNy4zLTEuNi0zLjIgMC01LjcgMC41LTcuMyAxLjYtMS41IDEuMS0yLjQgMi44LTIuNiA1em0xNi4zIDIuNGgxMGMxLjcgMCAzLjEtMC4zIDQuMi0wLjkgMS4xLTAuNiAyLTEuNSAyLjYtMi42IDAuNi0xLjEgMC45LTIuNSAwLjktNC4yIDAtMS43LTAuMy0zLjEtMC45LTQuMi0wLjYtMS4xLTEuNS0yLTIuNi0yLjYtMS4xLTAuNi0yLjUtMC45LTQuMi0wLjloLTEwdjYuOHptLTQuOC0xMC4yaDE0Ljh2NC44aC0xNC44di00Ljh6bS0xMC4xIDMuNGg0LjVjMC4xLTAuOSAwLjUtMS42IDEuMi0yLjEgMC43LTAuNSAxLjctMC44IDIuOS0wLjhzMi4yIDAuMyAyLjkgMC44YzAuNyAwLjUgMS4xIDEuMiAxLjIgMi4xaDQuNWMtMC4yLTEuOC0xLTMuMi0yLjQtNC4xLTEuNC0wLjktMy42LTEuNC02LjUtMS40LTIuOSAwLTUuMSAwLjUtNi41IDEuNC0xLjQgMC45LTIuMiAyLjMtMi40IDQuMXptLTMyLjUtOS4yaDEwdjI4LjJoLTExdi0xOC40aC05LjJ2MTguNGgtMTF2LTI4LjJoMTBsMC4xIDQuMmg5LjF2LTQuMnptLTQwLjcgMjQuOGMwLTEuOS0wLjYtMy40LTEuNy00LjUtMS4xLTEuMS0yLjctMS43LTQuNy0xLjdzLTMuNiAwLjYtNC43IDEuN2MtMS4xIDEuMS0xLjcgMi42LTEuNyA0LjUgMCAxLjkgMC42IDMuNCAxLjcgNC41IDEuMSAxLjEgMi43IDEuNyA0LjcgMS43czMuNi0wLjYgNC43LTEuN2MxLjEtMS4xIDEuNy0yLjYgMS43LTQuNXptLTExLjQgMGMwLTMuMiAxLjEtNS45IDMuMi03LjkgMi4xLTIgNC45LTMgOC40LTMgMy41IDAgNi4zIDAuOSA4LjQgMi45IDIuMSAyIDMuMiA0LjcgMy4yIDggMCAzLjItMS4xIDUuOS0zLjIgNy45LTIuMSAyLTUuMSAzLTguNCAzLTMuNCAwLTYuMi0xLTguMy0zLTIuMS0yLTMuMi00LjctMy4yLTcuOXptLTQ1LjMtMTQuNmgxMHYyOC4yaC0xMHYtNC40Yy0xLjUgMi4xLTMuNSAzLjItNiAzLjItMi4zIDAtNC4yLTAuOC01LjUtMi40LTEuMy0xLjYtMi01LTIuOC0xMC4yLTAuOCA1LjItMi4yIDguNi00LjIgMTAuMi0yIDEuNi00LjUgMi40LTcuNCAyLjQtMi40IDAtNC40LTAuNy02LTIuMi0xLjYtMS41LTIuNS0zLjUtMi43LTZoLTEwYzAuMyA0LjQgMi4xIDcuOCA1LjMgMTAuMiAzLjIgMi40IDcuNCAzLjYgMTIuNCAzLjYgNS40IDAgOS42LTEuMiAxMi43LTMuNSAzLjEtMi4zIDQuNy01LjggNC43LTEwLjR2LTE0LjloLTEwem0tMjQuMSAwLjJjLTMuNSAwLTYuMyAwLjktOC40IDIuOC0yLjEgMS45LTMuMiA0LjUtMy4yIDcuOSAwIDMuMyAxLjEgNS45IDMuMiA3LjggMi4xIDEuOSA0LjkgMi45IDguNCAyLjkgMy41IDAgNi4zLTAuOSA4LjQtMi45IDIuMS0xLjkgMy4yLTQuNSAzLjItNy44IDAtMy4zLTEuMS01LjktMy4yLTcuOC0yLjEtMS45LTQuOS0yLjktOC40LTIuOXptMCA0LjZjMS45IDAgMy40IDAuNiA0LjQgMS43IDAuOSAxLjIgMS40IDIuOCAxLjQgNC45IDAgMi4xLTAuNSAzLjctMS40IDQuOS0wLjkgMS4yLTIuNSAxLjctNC40IDEuNy0xLjkgMC0zLjQtMC42LTQuNC0xLjctMC45LTEuMi0xLjQtMi44LTEuNC00LjkgMC0yLjEgMC41LTMuNyAxLjQtNC45IDEtMS4xIDIuNS0xLjcgNC40LTEuN3oiLz48L3N2Zz4=" alt="Red Bull Logo">
+            </div>
+            <h1>Caça a latinha</h1>
+            <p class="subtitle">Procure e encontre a latinha escondida!</p>
+        </header>
+
+        <div class="ar-container">
+            <div class="ar-demo-content">
+                <h2>AR Experience Demo</h2>
+                <p>In the full experience, you would see a camera view with AR elements here</p>
+            </div>
+            
+            <!-- Visual demo elements -->
+            <div class="redbull-can demo-can-1">
+                <div class="redbull-logo">RB</div>
+            </div>
+            <div class="redbull-can demo-can-2">
+                <div class="redbull-logo">RB</div>
+            </div>
+            <div class="redbull-can demo-can-3">
+                <div class="redbull-logo">RB</div>
+            </div>
+            <div class="redbull-can demo-can-4">
+                <div class="redbull-logo">RB</div>
+            </div>
+            <div class="destination demo-destination">
+                Red Bull Box Here!
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h2>Como funciona</h2>
+            <p>Apontar a câmera do seu celular ao seu redor para descobrir a trilha AR de latinhas Red Bull que leva à localização da verdadeira caixa Red Bull.</p>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Iniciar Experiência AR</h3>
+                    <p>Toque no botão abaixo para ativar a experiência da câmera AR</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Seguir a Trilha</h3>
+                    <p>Procure a latinha virtual da Red Bull em seu ambiente</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Encontre sua recompensa</h3>
+                    <p>Coleta a latinha para receber a dica da onde está a latinha real!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta">
+            <button class="cta-button" onclick="startARExperience()">Start AR Experience</button>
+        </div>
+
+        <footer>
+            <p>Experiencia criada por Metaverso Maua & Red Bull Marketing</p>
+            <p>© 2024 - All rights reserved</p>
+        </footer>
+    </div>
+
+    <!-- AR Game Elements (Hidden initially) -->
     <div id="camera-container">
         <video id="camera-video" autoplay playsinline></video>
     </div>
@@ -367,11 +586,11 @@
     <div id="ui-overlay">
         <div>
             <div id="instructions">
-                <h2>Encontre a latinha de Redbull!</h2>
-                <p>Movimente seu telefone e toque na lata quando a encontrar</p>
+                <h2>Encontre a latinha Red Bull!</h2>
+                <p>Movimente seu celular ao redor e toque na latinha quando encontrá-la</p>
             </div>
             <div id="score">
-                Encontradas: <span id="found-count">0</span> latas
+                Encontradas: <span id="found-count">0</span> latinhas
             </div>
         </div>
     </div>
@@ -382,34 +601,15 @@
     </div>
     
     <div id="congrats-popup">
-        <h2>Parabéns! 🎉</h2>
-        <p>Você encontrou a latinha flutuante!</p>
-        <button id="play-again">Jogar Novamente</button>
-    </div>
-    
-    <div id="welcome-screen">
-        <div class="welcome-content">
-            <h1 class="welcome-title">🥤 Caça à Lata AR</h1>
-            <p class="welcome-subtitle">Encontre a latinha flutuante usando realidade aumentada!</p>
-            
-            <div class="welcome-instructions">
-                <h3>Como jogar:</h3>
-                <ul class="instruction-list">
-                    <li>Mova seu telefone ao redor para procurar</li>
-                    <li>Procure por uma lata vermelha flutuando</li>
-                    <li>Toque na lata quando a encontrar</li>
-                    <li>Colete o máximo de latas que conseguir!</li>
-                </ul>
-            </div>
-            
-            <button id="start-game" class="start-game-btn">Começar Jogo</button>
-        </div>
+        <h2>Congratulations! 🎉</h2>
+        <p>You found the floating Red Bull can!</p>
+        <button id="play-again">Play Again</button>
     </div>
     
     <div id="loading">
         <div class="loader"></div>
-        <p>Iniciando câmera...</p>
-        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">Permitindo acesso à câmera para a experiência AR</p>
+        <p>Starting camera...</p>
+        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">Allowing camera access for AR experience</p>
     </div>
 
     <div class="camera-switch">
@@ -427,6 +627,22 @@
         let raycaster, mouse;
         let reticlePulseInterval;
         let gameStarted = false;
+        let arMode = false;
+
+        // Function to start AR experience (called from landing page button)
+        function startARExperience() {
+            arMode = true;
+            
+            // Hide landing page elements
+            document.querySelector('.container').style.display = 'none';
+            
+            // Show loading screen
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Initialize AR
+            init();
+            startCamera();
+        }
 
         // Initialize the application
         function init() {
@@ -437,7 +653,6 @@
             setupDeviceOrientation();
             
             // Set up event listeners
-            document.getElementById('start-game').addEventListener('click', startGame);
             document.getElementById('play-again').addEventListener('click', resetGame);
             document.querySelector('.camera-switch').addEventListener('click', switchCamera);
             
@@ -445,7 +660,7 @@
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
             
-            // Add click/touch event listener (initially disabled)
+            // Add click/touch event listener
             renderer.domElement.addEventListener('click', onCanvasTap, false);
             renderer.domElement.addEventListener('touchstart', onCanvasTap, { passive: false });
             
@@ -457,19 +672,18 @@
             
             // Start reticle pulsing animation
             startReticlePulse();
-            
-            // Automatically start camera when page loads
-            startCamera();
         }
 
-        // Start the game (called when "Start Game" button is clicked)
+        // Start the game automatically when camera loads
         function startGame() {
             gameStarted = true;
             
-            // Hide welcome screen
-            document.getElementById('welcome-screen').classList.add('hidden');
+            // Hide loading screen
+            document.getElementById('loading').style.display = 'none';
             
-            // Show game UI
+            // Show AR elements
+            document.getElementById('camera-container').style.display = 'block';
+            document.getElementById('canvas-container').style.display = 'block';
             document.getElementById('ui-overlay').style.display = 'flex';
             document.getElementById('reticle').style.display = 'block';
             document.querySelector('.camera-switch').style.display = 'flex';
@@ -553,7 +767,7 @@
             const collisionMaterial = new THREE.MeshBasicMaterial({ 
                 transparent: true, 
                 opacity: 0,
-                visible: false // Make it completely invisible
+                visible: false
             });
             const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
             collisionMesh.userData.isCanCollision = true;
@@ -579,7 +793,7 @@
                     gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
                 });
             } else {
-                alert('Device orientation not supported on this device. The experience will be limited.');
+                console.log('Device orientation not supported on this device. The experience will be limited.');
             }
         }
 
@@ -601,17 +815,8 @@
                     video.srcObject = stream;
                     video.play();
                     
-                    // Hide loading screen and show welcome screen
-                    document.getElementById('loading').style.display = 'none';
-                    
-                    // If game hasn't started yet, show welcome screen
-                    if (!gameStarted) {
-                        document.getElementById('welcome-screen').style.display = 'flex';
-                        // Hide game UI initially
-                        document.getElementById('ui-overlay').style.display = 'none';
-                        document.getElementById('reticle').style.display = 'none';
-                        document.querySelector('.camera-switch').style.display = 'none';
-                    }
+                    // Start the game automatically
+                    startGame();
                 })
                 .catch((error) => {
                     console.error('Camera error:', error);
@@ -619,10 +824,10 @@
                     // Show error message in loading screen
                     document.getElementById('loading').innerHTML = `
                         <div class="loader"></div>
-                        <p>Erro ao acessar a câmera</p>
-                        <button onclick="startCamera()" class="permission-btn">Tentar Novamente</button>
+                        <p>Error accessing camera</p>
+                        <button onclick="startCamera()" class="permission-btn">Try Again</button>
                         <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
-                            Verifique se você permitiu o acesso à câmera
+                            Please make sure you allowed camera access
                         </p>
                     `;
                     
@@ -678,17 +883,12 @@
             // Calculate objects intersecting the picking ray - use recursive to get children
             const intersects = raycaster.intersectObjects(scene.children, true);
             
-            // Debug: log intersections
-            console.log('Tap detected. Intersections found:', intersects.length);
-            
             // Check if we hit any part of the can group
             let hitCan = false;
             for (let i = 0; i < intersects.length; i++) {
-                console.log('Intersection', i, ':', intersects[i].object);
                 // Check if the intersected object is part of the can group
                 if (intersects[i].object.parent === can || intersects[i].object === can) {
                     hitCan = true;
-                    console.log('HIT CAN!');
                     break;
                 }
             }
@@ -697,8 +897,6 @@
                 foundCan = true;
                 foundCount++;
                 document.getElementById('found-count').textContent = foundCount;
-                
-                console.log('Can found! Total found:', foundCount);
                 
                 // Show hit effect
                 showHitEffect();
@@ -713,8 +911,6 @@
                 setTimeout(() => {
                     document.getElementById('congrats-popup').classList.add('visible');
                 }, 800);
-            } else {
-                console.log('No can hit this time');
             }
         }
 
@@ -795,7 +991,7 @@
             }
             
             // Render the scene
-            if (renderer && scene && camera) {
+            if (renderer && scene && camera && arMode) {
                 renderer.render(scene, camera);
             }
         }
@@ -810,9 +1006,6 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
             }
         });
-
-        // Initialize the app when the page loads
-        window.addEventListener('load', init);
     </script>
 </body>
 </html>
