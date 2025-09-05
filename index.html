@@ -201,6 +201,78 @@
             background: linear-gradient(135deg, #f0f0f0, #e5e5e5);
         }
         
+        #game-complete-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #ff0000, #ff9900);
+            padding: 40px;
+            border-radius: 25px;
+            text-align: center;
+            z-index: 11;
+            width: 85%;
+            max-width: 450px;
+            box-shadow: 0 20px 50px rgba(255, 0, 0, 0.5), 0 0 60px rgba(255, 153, 0, 0.3);
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            border: 2px solid rgba(255, 153, 0, 0.4);
+        }
+        
+        #game-complete-popup.visible {
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+        
+        #game-complete-popup h2 {
+            margin-bottom: 20px;
+            font-size: 2rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        #game-complete-popup p {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .achievement-text {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            font-style: italic;
+            margin-bottom: 30px !important;
+            opacity: 0.95;
+        }
+        
+        #restart-game {
+            background: linear-gradient(135deg, #ffffff, #f5f5f5);
+            color: #ff0000;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-family: 'Montserrat', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        #restart-game:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        #restart-game:active {
+            transform: translateY(-1px) scale(0.95);
+            background: linear-gradient(135deg, #f0f0f0, #e5e5e5);
+        }
+        
         #loading {
             position: fixed;
             top: 0;
@@ -454,7 +526,7 @@
                 <p>Movimente seu telefone e toque na lata quando a encontrar</p>
             </div>
             <div id="score">
-                Encontradas: <span id="found-count">0</span> latas
+                Encontradas: <span id="found-count">0</span>/<span id="target-count">3</span> latas
             </div>
         </div>
     </div>
@@ -465,9 +537,16 @@
     </div>
     
     <div id="congrats-popup">
-        <h2>Parabéns! 🎉</h2>
-        <p>Você encontrou a latinha flutuante!</p>
+        <h2 id="congrats-title">Parabéns! 🎉</h2>
+        <p id="congrats-text">Você encontrou a latinha flutuante!</p>
         <button id="play-again">Jogar Novamente</button>
+    </div>
+    
+    <div id="game-complete-popup">
+        <h2>🏆 MISSÃO CUMPRIDA! 🏆</h2>
+        <p>Você encontrou todas as <span id="final-count">3</span> latas Red Bull!</p>
+        <p class="achievement-text">Red Bull te deu asas! Experiência AR concluída com sucesso!</p>
+        <button id="restart-game">Começar Nova Experiência</button>
     </div>
     
     <div id="welcome-screen">
@@ -500,6 +579,9 @@
     </div>
 
     <script>
+        // GAME CONFIGURATION - Change this number to set how many cans need to be found
+        const CANS_TO_FIND = 3; // Easy to change for testing different amounts!
+        
         // Main application variables
         let video, renderer, scene, camera, can;
         let alpha = 0, beta = 0, gamma = 0;
@@ -510,9 +592,14 @@
         let raycaster, mouse;
         let reticlePulseInterval;
         let gameStarted = false;
+        let gameCompleted = false;
 
         // Initialize the application
         function init() {
+            // Update UI with target count
+            document.getElementById('target-count').textContent = CANS_TO_FIND;
+            document.getElementById('final-count').textContent = CANS_TO_FIND;
+            
             // Set up Three.js
             setupThreeJS();
             
@@ -522,6 +609,7 @@
             // Set up event listeners - check if elements exist first
             const startButton = document.getElementById('start-game');
             const playAgainButton = document.getElementById('play-again');
+            const restartGameButton = document.getElementById('restart-game');
             const cameraSwitchButton = document.querySelector('.camera-switch');
             
             // Don't add event listener to start button since we're using onclick
@@ -533,6 +621,10 @@
             
             if (playAgainButton) {
                 playAgainButton.addEventListener('click', resetGame);
+            }
+            
+            if (restartGameButton) {
+                restartGameButton.addEventListener('click', restartCompleteGame);
             }
             
             if (cameraSwitchButton) {
@@ -797,8 +889,8 @@
 
         // Handle tap on canvas
         function onCanvasTap(event) {
-            // Only allow tapping if game has started
-            if (!gameStarted || foundCan) return;
+            // Only allow tapping if game has started and not completed
+            if (!gameStarted || foundCan || gameCompleted) return;
             
             // Prevent default for touch events to avoid scrolling
             if (event.type === 'touchstart') {
@@ -842,7 +934,7 @@
                 foundCount++;
                 document.getElementById('found-count').textContent = foundCount;
                 
-                console.log('Can found! Total found:', foundCount);
+                console.log('Can found! Total found:', foundCount + '/' + CANS_TO_FIND);
                 
                 // Show hit effect
                 showHitEffect();
@@ -853,10 +945,25 @@
                     if (can) can.scale.set(1, 1, 1);
                 }, 200);
                 
-                // Show congratulations after a short delay
-                setTimeout(() => {
-                    document.getElementById('congrats-popup').classList.add('visible');
-                }, 800);
+                // Check if game is complete
+                if (foundCount >= CANS_TO_FIND) {
+                    gameCompleted = true;
+                    console.log('GAME COMPLETED! All', CANS_TO_FIND, 'cans found!');
+                    
+                    // Show game completion popup after a short delay
+                    setTimeout(() => {
+                        document.getElementById('game-complete-popup').classList.add('visible');
+                    }, 1000);
+                } else {
+                    // Show individual can congratulations for continuing the game
+                    const remaining = CANS_TO_FIND - foundCount;
+                    document.getElementById('congrats-title').textContent = `Ótimo! 🎉`;
+                    document.getElementById('congrats-text').textContent = `Você encontrou ${foundCount}/${CANS_TO_FIND} latas! Faltam apenas ${remaining}!`;
+                    
+                    setTimeout(() => {
+                        document.getElementById('congrats-popup').classList.add('visible');
+                    }, 800);
+                }
             } else {
                 console.log('No can hit this time');
             }
@@ -911,11 +1018,23 @@
             }
         }
 
-        // Reset the game for another round
+        // Reset the game for another round (single can found)
         function resetGame() {
             foundCan = false;
             document.getElementById('congrats-popup').classList.remove('visible');
             randomizeCanPosition();
+        }
+        
+        // Restart the complete game (all cans found - new experience)
+        function restartCompleteGame() {
+            foundCan = false;
+            foundCount = 0;
+            gameCompleted = false;
+            document.getElementById('found-count').textContent = '0';
+            document.getElementById('game-complete-popup').classList.remove('visible');
+            randomizeCanPosition();
+            
+            console.log('Game restarted - looking for', CANS_TO_FIND, 'cans again!');
         }
 
         // Animation loop
@@ -927,14 +1046,14 @@
                 camera.rotation.set(beta, alpha, gamma, 'YXZ');
             }
             
-            // Animate the can (floating effect) - only if game has started
-            if (can && !foundCan && gameStarted) {
+            // Animate the can (floating effect) - only if game has started and not completed
+            if (can && !foundCan && gameStarted && !gameCompleted) {
                 can.userData.floatTime += 0.01;
                 can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
                 can.rotation.y += 0.01;
                 can.visible = true;
-            } else if (can && !gameStarted) {
-                // Hide can before game starts
+            } else if (can && (!gameStarted || gameCompleted)) {
+                // Hide can before game starts or after completion
                 can.visible = false;
             }
             
