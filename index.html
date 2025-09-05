@@ -1,32 +1,818 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Red Bull AR</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    model-viewer {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Caça a Lata</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            color: white;
+            touch-action: none;
+        }
+        
+        #camera-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #camera-video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            transform: scaleX(-1);
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #instructions {
+            background: linear-gradient(135deg, rgba(110, 72, 170, 0.8), rgba(157, 80, 187, 0.8));
+            padding: 15px 20px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 80%;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        #score {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            text-align: center;
+            margin-top: 15px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #reticle {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            z-index: 4;
+            pointer-events: none;
+        }
+        
+        .reticle-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(110, 72, 170, 0.8);
+        }
+        
+        .reticle-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #congrats-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 10;
+            width: 80%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        
+        #congrats-popup.visible {
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+        
+        #congrats-popup h2 {
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        #congrats-popup p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        
+        #play-again {
+            background-color: white;
+            color: #6e48aa;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        
+        #play-again:active {
+            transform: scale(0.95);
+            background-color: #f0f0f0;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        #welcome-screen.hidden {
+            display: none;
+        }
+        
+        .welcome-content {
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .welcome-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .welcome-instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .welcome-instructions h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        
+        .instruction-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        
+        .instruction-list li {
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+        
+        .instruction-list li:before {
+            content: "📱";
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        
+        .instruction-list li:nth-child(2):before {
+            content: "👀";
+        }
+        
+        .instruction-list li:nth-child(3):before {
+            content: "👆";
+        }
+        
+        .instruction-list li:nth-child(4):before {
+            content: "🎉";
+        }
+        
+        .start-game-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #6e48aa;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .start-game-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .start-game-btn:active {
+            transform: translateY(0);
+        }
+        
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            border-top: 5px solid #9d50bb;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .permission-btn {
+            background: linear-gradient(135deg, #6e48aa, #9d50bb);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        .permission-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        
+        .camera-switch {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 4;
+            background: rgba(0, 0, 0, 0.7);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+        }
+        
+        .camera-icon {
+            font-size: 24px;
+            color: white;
+        }
+        
+        .hit-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        @keyframes hitAnimation {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+    </style>
 </head>
 <body>
-  <model-viewer src="assets/redbull.glb"
-                ar
-                ar-modes="webxr scene-viewer quick-look"
-                camera-controls
-                auto-rotate
-                shadow-intensity="1">
-  </model-viewer>
+    <div id="camera-container">
+        <video id="camera-video" autoplay playsinline></video>
+    </div>
+    
+    <div id="canvas-container"></div>
+    
+    <div id="ui-overlay">
+        <div>
+            <div id="instructions">
+                <h2>Encontre a latinha de Redbull!</h2>
+                <p>Movimente seu telefone e toque na lata quando a encontrar</p>
+            </div>
+            <div id="score">
+                Encontradas: <span id="found-count">0</span> latas
+            </div>
+        </div>
+    </div>
+    
+    <div id="reticle">
+        <div class="reticle-circle"></div>
+        <div class="reticle-dot"></div>
+    </div>
+    
+    <div id="congrats-popup">
+        <h2>Parabéns! 🎉</h2>
+        <p>Você encontrou a latinha flutuante!</p>
+        <button id="play-again">Jogar Novamente</button>
+    </div>
+    
+    <div id="welcome-screen">
+        <div class="welcome-content">
+            <h1 class="welcome-title">🥤 Caça à Lata AR</h1>
+            <p class="welcome-subtitle">Encontre a latinha flutuante usando realidade aumentada!</p>
+            
+            <div class="welcome-instructions">
+                <h3>Como jogar:</h3>
+                <ul class="instruction-list">
+                    <li>Mova seu telefone ao redor para procurar</li>
+                    <li>Procure por uma lata vermelha flutuando</li>
+                    <li>Toque na lata quando a encontrar</li>
+                    <li>Colete o máximo de latas que conseguir!</li>
+                </ul>
+            </div>
+            
+            <button id="start-game" class="start-game-btn">Começar Jogo</button>
+        </div>
+    </div>
+    
+    <div id="loading">
+        <div class="loader"></div>
+        <p>Iniciando câmera...</p>
+        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">Permitindo acesso à câmera para a experiência AR</p>
+    </div>
+
+    <div class="camera-switch">
+        <div class="camera-icon">📷</div>
+    </div>
+
+    <script>
+        // Main application variables
+        let video, renderer, scene, camera, can;
+        let alpha = 0, beta = 0, gamma = 0;
+        let canPosition = { x: 0, y: 0, z: -15 };
+        let foundCan = false;
+        let currentFacingMode = 'environment';
+        let foundCount = 0;
+        let raycaster, mouse;
+        let reticlePulseInterval;
+        let gameStarted = false;
+
+        // Initialize the application
+        function init() {
+            // Set up Three.js
+            setupThreeJS();
+            
+            // Set up device orientation
+            setupDeviceOrientation();
+            
+            // Set up event listeners
+            document.getElementById('start-game').addEventListener('click', startGame);
+            document.getElementById('play-again').addEventListener('click', resetGame);
+            document.querySelector('.camera-switch').addEventListener('click', switchCamera);
+            
+            // Set up raycaster for tap detection
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // Add click/touch event listener (initially disabled)
+            renderer.domElement.addEventListener('click', onCanvasTap, false);
+            renderer.domElement.addEventListener('touchstart', onCanvasTap, { passive: false });
+            
+            // Randomize can position
+            randomizeCanPosition();
+            
+            // Start the render loop
+            animate();
+            
+            // Start reticle pulsing animation
+            startReticlePulse();
+            
+            // Automatically start camera when page loads
+            startCamera();
+        }
+
+        // Start the game (called when "Start Game" button is clicked)
+        function startGame() {
+            gameStarted = true;
+            
+            // Hide welcome screen
+            document.getElementById('welcome-screen').classList.add('hidden');
+            
+            // Show game UI
+            document.getElementById('ui-overlay').style.display = 'flex';
+            document.getElementById('reticle').style.display = 'block';
+            document.querySelector('.camera-switch').style.display = 'flex';
+        }
+
+        // Set up Three.js environment
+        function setupThreeJS() {
+            // Create scene
+            scene = new THREE.Scene();
+            
+            // Create camera with wider field of view for distance
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Create the can
+            createCan();
+            
+            // Add some ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            // Add directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Add a second light for better visibility
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-1, -1, -1);
+            scene.add(directionalLight2);
+        }
+
+        // Create a 3D can model
+        function createCan() {
+            const group = new THREE.Group();
+            
+            // Can body (cylinder)
+            const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xff3333,
+                shininess: 80,
+                specular: 0xeeeeee
+            });
+            const body = new THREE.Mesh(geometry, material);
+            group.add(body);
+            
+            // Can top
+            const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
+            const topMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 100 });
+            const top = new THREE.Mesh(topGeometry, topMaterial);
+            top.position.y = 0.625;
+            group.add(top);
+            
+            // Can rim
+            const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
+            const rimMaterial = new THREE.MeshPhongMaterial({ color: 0xeeeeee, shininess: 100 });
+            const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+            rim.position.y = 0.625;
+            rim.rotation.x = Math.PI / 2;
+            group.add(rim);
+            
+            // Can label
+            const labelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 32);
+            const labelMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x3366ff,
+                shininess: 60
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.y = 0.1;
+            label.scale.set(1.01, 1, 1.01);
+            group.add(label);
+            
+            // Add invisible collision sphere for easier tapping
+            const collisionGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const collisionMaterial = new THREE.MeshBasicMaterial({ 
+                transparent: true, 
+                opacity: 0,
+                visible: false // Make it completely invisible
+            });
+            const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+            collisionMesh.userData.isCanCollision = true;
+            group.add(collisionMesh);
+            
+            // Add floating animation
+            group.userData = { floatTime: Math.random() * 100 };
+            
+            scene.add(group);
+            can = group;
+            
+            // Position the can further away
+            can.position.set(canPosition.x, canPosition.y, canPosition.z);
+        }
+
+        // Set up device orientation tracking
+        function setupDeviceOrientation() {
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (event) => {
+                    // Adjust these values based on device orientation
+                    alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+                    beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+                    gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+                });
+            } else {
+                alert('Device orientation not supported on this device. The experience will be limited.');
+            }
+        }
+
+        // Start the device camera
+        function startCamera() {
+            video = document.getElementById('camera-video');
+            
+            // Request camera access with environment (back) camera
+            const constraints = {
+                video: { 
+                    facingMode: currentFacingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+            
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then((stream) => {
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    // Hide loading screen and show welcome screen
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    // If game hasn't started yet, show welcome screen
+                    if (!gameStarted) {
+                        document.getElementById('welcome-screen').style.display = 'flex';
+                        // Hide game UI initially
+                        document.getElementById('ui-overlay').style.display = 'none';
+                        document.getElementById('reticle').style.display = 'none';
+                        document.querySelector('.camera-switch').style.display = 'none';
+                    }
+                })
+                .catch((error) => {
+                    console.error('Camera error:', error);
+                    
+                    // Show error message in loading screen
+                    document.getElementById('loading').innerHTML = `
+                        <div class="loader"></div>
+                        <p>Erro ao acessar a câmera</p>
+                        <button onclick="startCamera()" class="permission-btn">Tentar Novamente</button>
+                        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
+                            Verifique se você permitiu o acesso à câmera
+                        </p>
+                    `;
+                    
+                    // If back camera fails, try front camera
+                    if (currentFacingMode === 'environment') {
+                        currentFacingMode = 'user';
+                        video.style.transform = 'scaleX(1)';
+                        setTimeout(() => startCamera(), 1000);
+                    }
+                });
+        }
+
+        // Switch between front and back camera
+        function switchCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            
+            // Update video flip for front/back camera
+            video.style.transform = currentFacingMode === 'environment' ? 'scaleX(-1)' : 'scaleX(1)';
+            
+            // Restart camera with new facing mode
+            if (video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+            
+            startCamera();
+        }
+
+        // Handle tap on canvas
+        function onCanvasTap(event) {
+            // Only allow tapping if game has started
+            if (!gameStarted || foundCan) return;
+            
+            // Prevent default for touch events to avoid scrolling
+            if (event.type === 'touchstart') {
+                event.preventDefault();
+            }
+            
+            // Calculate mouse/touch position in normalized device coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            
+            if (event.type === 'touchstart') {
+                mouse.x = ((event.touches[0].clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.touches[0].clientY - rect.top) / rect.height) * 2 + 1;
+            } else {
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            }
+            
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Calculate objects intersecting the picking ray - use recursive to get children
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            
+            // Debug: log intersections
+            console.log('Tap detected. Intersections found:', intersects.length);
+            
+            // Check if we hit any part of the can group
+            let hitCan = false;
+            for (let i = 0; i < intersects.length; i++) {
+                console.log('Intersection', i, ':', intersects[i].object);
+                // Check if the intersected object is part of the can group
+                if (intersects[i].object.parent === can || intersects[i].object === can) {
+                    hitCan = true;
+                    console.log('HIT CAN!');
+                    break;
+                }
+            }
+            
+            if (hitCan) {
+                foundCan = true;
+                foundCount++;
+                document.getElementById('found-count').textContent = foundCount;
+                
+                console.log('Can found! Total found:', foundCount);
+                
+                // Show hit effect
+                showHitEffect();
+                
+                // Add visual feedback to the can
+                can.scale.set(1.2, 1.2, 1.2);
+                setTimeout(() => {
+                    if (can) can.scale.set(1, 1, 1);
+                }, 200);
+                
+                // Show congratulations after a short delay
+                setTimeout(() => {
+                    document.getElementById('congrats-popup').classList.add('visible');
+                }, 800);
+            } else {
+                console.log('No can hit this time');
+            }
+        }
+
+        // Show hit effect animation
+        function showHitEffect() {
+            const effect = document.createElement('div');
+            effect.className = 'hit-effect';
+            document.body.appendChild(effect);
+            
+            // Animate the effect
+            effect.style.animation = 'hitAnimation 0.8s forwards';
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                document.body.removeChild(effect);
+            }, 800);
+        }
+
+        // Start reticle pulsing animation
+        function startReticlePulse() {
+            const reticle = document.getElementById('reticle');
+            let scale = 1;
+            let growing = true;
+            
+            reticlePulseInterval = setInterval(() => {
+                if (growing) {
+                    scale += 0.01;
+                    if (scale >= 1.1) growing = false;
+                } else {
+                    scale -= 0.01;
+                    if (scale <= 0.9) growing = true;
+                }
+                
+                reticle.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            }, 50);
+        }
+
+        // Randomize can position for replayability
+        function randomizeCanPosition() {
+            // Place can randomly around the user (but not directly in front)
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 12 + Math.random() * 5;
+            
+            canPosition.x = Math.cos(angle) * distance;
+            canPosition.y = 1.5 + Math.random() * 2;
+            canPosition.z = Math.sin(angle) * distance;
+            
+            if (can) {
+                can.position.set(canPosition.x, canPosition.y, canPosition.z);
+            }
+        }
+
+        // Reset the game for another round
+        function resetGame() {
+            foundCan = false;
+            document.getElementById('congrats-popup').classList.remove('visible');
+            randomizeCanPosition();
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Apply device orientation to camera
+            if (camera) {
+                camera.rotation.set(beta, alpha, gamma, 'YXZ');
+            }
+            
+            // Animate the can (floating effect) - only if game has started
+            if (can && !foundCan && gameStarted) {
+                can.userData.floatTime += 0.01;
+                can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+                can.rotation.y += 0.01;
+                can.visible = true;
+            } else if (can && !gameStarted) {
+                // Hide can before game starts
+                can.visible = false;
+            }
+            
+            // Render the scene
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if (renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Initialize the app when the page loads
+        window.addEventListener('load', init);
+    </script>
 </body>
 </html>
