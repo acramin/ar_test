@@ -55,7 +55,7 @@
             height: 100%;
             z-index: 3;
             pointer-events: none;
-            display: flex;
+            display: none;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
@@ -192,7 +192,7 @@
         }
         
         #welcome-screen.hidden {
-            display: none;
+            display: none !important;
         }
         
         .welcome-content {
@@ -402,7 +402,7 @@
                 </ul>
             </div>
             
-            <button id="start-game" class="start-game-btn">Começar Jogo</button>
+            <button id="start-game" class="start-game-btn" onclick="window.startGameFromButton();">Começar Jogo</button>
         </div>
     </div>
     
@@ -436,10 +436,25 @@
             // Set up device orientation
             setupDeviceOrientation();
             
-            // Set up event listeners
-            document.getElementById('start-game').addEventListener('click', startGame);
-            document.getElementById('play-again').addEventListener('click', resetGame);
-            document.querySelector('.camera-switch').addEventListener('click', switchCamera);
+            // Set up event listeners - check if elements exist first
+            const startButton = document.getElementById('start-game');
+            const playAgainButton = document.getElementById('play-again');
+            const cameraSwitchButton = document.querySelector('.camera-switch');
+            
+            // Don't add event listener to start button since we're using onclick
+            if (startButton) {
+                console.log('Start game button found (using onclick)');
+            } else {
+                console.error('Start game button not found');
+            }
+            
+            if (playAgainButton) {
+                playAgainButton.addEventListener('click', resetGame);
+            }
+            
+            if (cameraSwitchButton) {
+                cameraSwitchButton.addEventListener('click', switchCamera);
+            }
             
             // Set up raycaster for tap detection
             raycaster = new THREE.Raycaster();
@@ -464,15 +479,42 @@
 
         // Start the game (called when "Start Game" button is clicked)
         function startGame() {
+            console.log('startGame function called!');
             gameStarted = true;
             
-            // Hide welcome screen
-            document.getElementById('welcome-screen').classList.add('hidden');
+            // Hide welcome screen with force
+            const welcomeScreen = document.getElementById('welcome-screen');
+            if (welcomeScreen) {
+                welcomeScreen.classList.add('hidden');
+                welcomeScreen.style.display = 'none';
+                welcomeScreen.style.visibility = 'hidden';
+                console.log('Welcome screen hidden');
+            } else {
+                console.error('Welcome screen not found');
+            }
             
             // Show game UI
-            document.getElementById('ui-overlay').style.display = 'flex';
-            document.getElementById('reticle').style.display = 'block';
-            document.querySelector('.camera-switch').style.display = 'flex';
+            const uiOverlay = document.getElementById('ui-overlay');
+            const reticle = document.getElementById('reticle');
+            const cameraSwitch = document.querySelector('.camera-switch');
+            
+            if (uiOverlay) {
+                uiOverlay.style.display = 'flex';
+                uiOverlay.style.visibility = 'visible';
+                console.log('UI overlay shown');
+            }
+            
+            if (reticle) {
+                reticle.style.display = 'block';
+                reticle.style.visibility = 'visible';
+                console.log('Reticle shown');
+            }
+            
+            if (cameraSwitch) {
+                cameraSwitch.style.display = 'flex';
+                cameraSwitch.style.visibility = 'visible';
+                console.log('Camera switch shown');
+            }
         }
 
         // Set up Three.js environment
@@ -813,6 +855,18 @@
 
         // Initialize the app when the page loads
         window.addEventListener('load', init);
+        
+        // Add a simple test function to make sure JavaScript is working
+        function testButton() {
+            console.log('Test button clicked!');
+            alert('Button is working!');
+        }
+        
+        // Add another way to start the game
+        window.startGameFromButton = function() {
+            console.log('Starting game from button click');
+            startGame();
+        };
     </script>
 </body>
 </html>
