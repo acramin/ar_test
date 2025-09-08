@@ -159,22 +159,22 @@ function createCan() {
   //   shininess: 90,
   //   specular: 0x6699cc,
   // });
-  // const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-  // logo.position.y = -0.1;
-  // group.add(logo);
-  // const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
-  // const collisionMaterial = new THREE.MeshBasicMaterial({
-  //   transparent: true,
-  //   opacity: 0,
-  //   visible: false,
-  // });
-  // const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
-  // collisionMesh.userData.isCanCollision = true;
-  // group.add(collisionMesh);
-  // group.userData = { floatTime: Math.random() * 100 };
-  // scene.add(group);
-  // can = group;
-  // can.position.set(canPosition.x, canPosition.y, canPosition.z);
+  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  logo.position.y = -0.1;
+  group.add(logo);
+  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const collisionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    visible: false,
+  });
+  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  collisionMesh.userData.isCanCollision = true;
+  group.add(collisionMesh);
+  group.userData = { floatTime: Math.random() * 100 };
+  scene.add(group);
+  can = group;
+  can.position.set(canPosition.x, canPosition.y, canPosition.z);
 }
 
 function setupDeviceOrientation() {
