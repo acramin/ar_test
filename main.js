@@ -109,65 +109,72 @@ function setupThreeJS() {
 }
 
 function createCan() {
-  const group = new THREE.Group();
-  const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xff0000,
-    shininess: 100,
-    specular: 0xffffff,
+  const gltfloader = new THREE.GLTFLoader();
+  gltfloader.load("assets/redbull.glb", function (gltf) {
+    can = gltf.scene;
+    can.scale.set(0.5, 0.5, 0.5);
+    scene.add(can);
   });
-  const body = new THREE.Mesh(geometry, material);
-  group.add(body);
-  const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
-  const topMaterial = new THREE.MeshPhongMaterial({
-    color: 0xeeeeee,
-    shininess: 150,
-    specular: 0xffffff,
-  });
-  const top = new THREE.Mesh(topGeometry, topMaterial);
-  top.position.y = 0.625;
-  group.add(top);
-  const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
-  const rimMaterial = new THREE.MeshPhongMaterial({
-    color: 0xffffff,
-    shininess: 200,
-    specular: 0xffffff,
-  });
-  const rim = new THREE.Mesh(rimGeometry, rimMaterial);
-  rim.position.y = 0.625;
-  rim.rotation.x = Math.PI / 2;
-  group.add(rim);
-  const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
-  const labelMaterial = new THREE.MeshPhongMaterial({
-    color: 0xff9900,
-    shininess: 80,
-    specular: 0xffddaa,
-  });
-  const label = new THREE.Mesh(labelGeometry, labelMaterial);
-  label.position.y = 0.2;
-  group.add(label);
-  const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
-  const logoMaterial = new THREE.MeshPhongMaterial({
-    color: 0x003366,
-    shininess: 90,
-    specular: 0x6699cc,
-  });
-  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-  logo.position.y = -0.1;
-  group.add(logo);
-  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
-  const collisionMaterial = new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    visible: false,
-  });
-  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
-  collisionMesh.userData.isCanCollision = true;
-  group.add(collisionMesh);
-  group.userData = { floatTime: Math.random() * 100 };
-  scene.add(group);
-  can = group;
-  can.position.set(canPosition.x, canPosition.y, canPosition.z);
+  // --- IGNORE --- This is the old can model creation code, kept for reference
+  // const group = new THREE.Group();
+  // const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+  // const material = new THREE.MeshPhongMaterial({
+  //   color: 0xff0000,
+  //   shininess: 100,
+  //   specular: 0xffffff,
+  // });
+  // const body = new THREE.Mesh(geometry, material);
+  // group.add(body);
+  // const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
+  // const topMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xeeeeee,
+  //   shininess: 150,
+  //   specular: 0xffffff,
+  // });
+  // const top = new THREE.Mesh(topGeometry, topMaterial);
+  // top.position.y = 0.625;
+  // group.add(top);
+  // const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
+  // const rimMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xffffff,
+  //   shininess: 200,
+  //   specular: 0xffffff,
+  // });
+  // const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+  // rim.position.y = 0.625;
+  // rim.rotation.x = Math.PI / 2;
+  // group.add(rim);
+  // const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
+  // const labelMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xff9900,
+  //   shininess: 80,
+  //   specular: 0xffddaa,
+  // });
+  // const label = new THREE.Mesh(labelGeometry, labelMaterial);
+  // label.position.y = 0.2;
+  // group.add(label);
+  // const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
+  // const logoMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0x003366,
+  //   shininess: 90,
+  //   specular: 0x6699cc,
+  // });
+  // const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  // logo.position.y = -0.1;
+  // group.add(logo);
+  // const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  // const collisionMaterial = new THREE.MeshBasicMaterial({
+  //   transparent: true,
+  //   opacity: 0,
+  //   visible: false,
+  // });
+  // const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  // collisionMesh.userData.isCanCollision = true;
+  // group.add(collisionMesh);
+  // group.userData = { floatTime: Math.random() * 100 };
+  // scene.add(group);
+  // can = group;
+  // can.position.set(canPosition.x, canPosition.y, canPosition.z);
 }
 
 function setupDeviceOrientation() {
