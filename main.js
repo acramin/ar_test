@@ -109,14 +109,15 @@ function setupThreeJS() {
 }
 
 function createCan() {
+  const group = new THREE.Group();
   const gltfloader = new THREE.GLTFLoader();
   gltfloader.load("assets/redbull.glb", function (gltf) {
     can = gltf.scene;
     can.scale.set(0.5, 0.5, 0.5);
-    scene.add(can);
+    group.add(can);
+    scene.add(group);
   });
   // --- IGNORE --- This is the old can model creation code, kept for reference
-  // const group = new THREE.Group();
   // const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
   // const material = new THREE.MeshPhongMaterial({
   //   color: 0xff0000,
@@ -159,9 +160,9 @@ function createCan() {
   //   shininess: 90,
   //   specular: 0x6699cc,
   // });
-  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-  logo.position.y = -0.1;
-  group.add(logo);
+  // const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  // logo.position.y = -0.1;
+  // group.add(logo);
   const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
   const collisionMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
@@ -261,10 +262,18 @@ function onCanvasTap(event) {
   console.log("Tap detected. Intersections found:", intersects.length);
   let hitCan = false;
   for (let i = 0; i < intersects.length; i++) {
-    console.log("Intersection", i, ":", intersects[i].object);
-    if (intersects[i].object.parent === can || intersects[i].object === can) {
+    const obj = intersects[i].object;
+    console.log("Intersection", i, ":", obj);
+    // Check for collision mesh by userData property
+    if (obj.userData && obj.userData.isCanCollision) {
       hitCan = true;
-      console.log("HIT CAN!");
+      console.log("HIT CAN via collision mesh!");
+      break;
+    }
+    // Fallback: check if intersected object is the can group or model
+    if (obj.parent === can || obj === can) {
+      hitCan = true;
+      console.log("HIT CAN via group/model!");
       break;
     }
   }
