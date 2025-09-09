@@ -110,17 +110,30 @@ function setupThreeJS() {
 
 function createCan() {
   const group = new THREE.Group();
-  const gltfloader = new THREE.GLTFLoader();
-  gltfloader.load("assets/redbull.glb", function (gltf) {
-    console.log(gltf);
-    printGLTFInfo(gltf);
-    print("lata do carai")
-    const model = gltf.scene;
-    model.scale.set(0.5, 0.5, 0.5);
-    group.add(model);
-    scene.add(group);
-  });
-  // --- IGNORE --- This is the old can model creation code, kept for reference
+  
+  // Check if GLTFLoader exists
+  if (typeof THREE.GLTFLoader !== 'undefined') {
+    const gltfloader = new THREE.GLTFLoader();
+    gltfloader.load("assets/redbull.glb", 
+      function (gltf) {
+        console.log("GLB loaded:", gltf);
+        console.log("Model loaded successfully!");
+        const model = gltf.scene;
+        model.scale.set(0.5, 0.5, 0.5);
+        group.add(model);
+      },
+      undefined,
+      function (error) {
+        console.log("GLB failed to load:", error);
+        // createProceduralCan(group); // Commented out as requested
+      }
+    );
+  } else {
+    console.log("GLTFLoader not available");
+    // createProceduralCan(group); // Commented out as requested
+  }
+  
+  // --- PROCEDURAL CAN CODE (COMMENTED OUT) ---
   // const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
   // const material = new THREE.MeshPhongMaterial({
   //   color: 0xff0000,
@@ -166,6 +179,7 @@ function createCan() {
   // const logo = new THREE.Mesh(logoGeometry, logoMaterial);
   // logo.position.y = -0.1;
   // group.add(logo);
+  
   const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
   const collisionMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
