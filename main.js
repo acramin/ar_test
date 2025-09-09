@@ -109,52 +109,63 @@ function setupThreeJS() {
 }
 
 function createCan() {
-  console.log("Creating can model...");
-  
   const group = new THREE.Group();
-  
-  // Check if GLTFLoader is available
-  if (typeof THREE.GLTFLoader !== 'undefined') {
-    console.log("GLTFLoader available: true");
-    const gltfloader = new THREE.GLTFLoader();
-    
-    console.log("Loading 3D model from: assets/redbull.glb");
-    
-    gltfloader.load(
-      "assets/redbull.glb", 
-      function (gltf) {
-        console.log("✅ GLB model loaded successfully!");
-        console.log("Model data:", gltf);
-        
-        // Get the scene from the loaded model
-        const model = gltf.scene;
-        
-        // Scale the model appropriately
-        model.scale.set(0.5, 0.5, 0.5);
-        
-        // Add the model to the group
-        group.add(model);
-        
-        console.log("✅ Custom GLB model setup complete!");
-      },
-      function (progress) {
-        // Loading progress
-        const percent = (progress.loaded / progress.total * 100).toFixed(0);
-        console.log(`Model loading progress: ${percent}%`);
-      },
-      function (error) {
-        console.log("❌ Failed to load GLB model:", error);
-        console.log("🔄 Falling back to procedural Red Bull can...");
-        createProceduralCan(group);
-      }
-    );
-  } else {
-    console.log("GLTFLoader available: false");
-    console.log("🔄 Using procedural Red Bull can...");
-    createProceduralCan(group);
-  }
-  
-  // Add collision detection sphere (works for both models)
+  const gltfloader = new THREE.GLTFLoader();
+  gltfloader.load("assets/redbull.glb", function (gltf) {
+    console.log(gltf);
+    printGLTFInfo(gltf);
+    print("lata do carai")
+    can = gltf.scene;
+    can.scale.set(0.5, 0.5, 0.5);
+    group.add(can);
+    scene.add(group);
+  });
+  // --- IGNORE --- This is the old can model creation code, kept for reference
+  // const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+  // const material = new THREE.MeshPhongMaterial({
+  //   color: 0xff0000,
+  //   shininess: 100,
+  //   specular: 0xffffff,
+  // });
+  // const body = new THREE.Mesh(geometry, material);
+  // group.add(body);
+  // const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
+  // const topMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xeeeeee,
+  //   shininess: 150,
+  //   specular: 0xffffff,
+  // });
+  // const top = new THREE.Mesh(topGeometry, topMaterial);
+  // top.position.y = 0.625;
+  // group.add(top);
+  // const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
+  // const rimMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xffffff,
+  //   shininess: 200,
+  //   specular: 0xffffff,
+  // });
+  // const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+  // rim.position.y = 0.625;
+  // rim.rotation.x = Math.PI / 2;
+  // group.add(rim);
+  // const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
+  // const labelMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0xff9900,
+  //   shininess: 80,
+  //   specular: 0xffddaa,
+  // });
+  // const label = new THREE.Mesh(labelGeometry, labelMaterial);
+  // label.position.y = 0.2;
+  // group.add(label);
+  // const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
+  // const logoMaterial = new THREE.MeshPhongMaterial({
+  //   color: 0x003366,
+  //   shininess: 90,
+  //   specular: 0x6699cc,
+  // });
+  // const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  // logo.position.y = -0.1;
+  // group.add(logo);
   const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
   const collisionMaterial = new THREE.MeshBasicMaterial({
     transparent: true,
@@ -164,77 +175,10 @@ function createCan() {
   const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
   collisionMesh.userData.isCanCollision = true;
   group.add(collisionMesh);
-  
-  // Set up group properties
   group.userData = { floatTime: Math.random() * 100 };
   scene.add(group);
-  
-  // Set initial reference
   can = group;
   can.position.set(canPosition.x, canPosition.y, canPosition.z);
-  
-  console.log("Can group created and positioned at:", canPosition);
-}
-
-function createProceduralCan(group) {
-  console.log("Creating procedural Red Bull can...");
-  
-  // Main body (red)
-  const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xff0000,
-    shininess: 100,
-    specular: 0xffffff,
-  });
-  const body = new THREE.Mesh(geometry, material);
-  group.add(body);
-
-  // Top (silver)
-  const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
-  const topMaterial = new THREE.MeshPhongMaterial({
-    color: 0xeeeeee,
-    shininess: 150,
-    specular: 0xffffff,
-  });
-  const top = new THREE.Mesh(topGeometry, topMaterial);
-  top.position.y = 0.625;
-  group.add(top);
-
-  // Rim (white)
-  const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
-  const rimMaterial = new THREE.MeshPhongMaterial({
-    color: 0xffffff,
-    shininess: 200,
-    specular: 0xffffff,
-  });
-  const rim = new THREE.Mesh(rimGeometry, rimMaterial);
-  rim.position.y = 0.625;
-  rim.rotation.x = Math.PI / 2;
-  group.add(rim);
-
-  // Label band (orange)
-  const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
-  const labelMaterial = new THREE.MeshPhongMaterial({
-    color: 0xff9900,
-    shininess: 80,
-    specular: 0xffddaa,
-  });
-  const label = new THREE.Mesh(labelGeometry, labelMaterial);
-  label.position.y = 0.2;
-  group.add(label);
-
-  // Logo area (blue)
-  const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
-  const logoMaterial = new THREE.MeshPhongMaterial({
-    color: 0x003366,
-    shininess: 90,
-    specular: 0x6699cc,
-  });
-  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-  logo.position.y = -0.1;
-  group.add(logo);
-  
-  console.log("✅ Procedural Red Bull can created!");
 }
 
 function setupDeviceOrientation() {
@@ -425,35 +369,14 @@ function animate() {
   if (camera) {
     camera.rotation.set(beta, alpha, gamma, "YXZ");
   }
-  
-  // Debug can visibility
-  if (can) {
-    if (!foundCan && gameStarted && !gameCompleted) {
-      can.userData.floatTime += 0.01;
-      can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-      can.rotation.y += 0.01;
-      can.visible = true;
-      
-      // Debug log occasionally
-      if (Math.floor(can.userData.floatTime * 100) % 500 === 0) {
-        console.log("Can is visible and animating at position:", can.position);
-        console.log("Game started:", gameStarted, "Found can:", foundCan, "Game completed:", gameCompleted);
-      }
-    } else if (!gameStarted || gameCompleted) {
-      can.visible = false;
-      
-      // Debug log when hidden
-      if (Math.floor(Date.now() / 1000) % 5 === 0) {
-        console.log("Can is hidden - Game started:", gameStarted, "Game completed:", gameCompleted);
-      }
-    }
-  } else {
-    // Debug when can doesn't exist
-    if (Math.floor(Date.now() / 1000) % 3 === 0) {
-      console.log("⚠️  Can object is null/undefined!");
-    }
+  if (can && !foundCan && gameStarted && !gameCompleted) {
+    can.userData.floatTime += 0.01;
+    can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+    can.rotation.y += 0.01;
+    can.visible = true;
+  } else if (can && (!gameStarted || gameCompleted)) {
+    can.visible = false;
   }
-  
   if (renderer && scene && camera) {
     renderer.render(scene, camera);
   }
