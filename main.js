@@ -119,7 +119,7 @@ function createCan() {
         console.log("GLB loaded:", gltf);
         console.log("Model loaded successfully!");
         const model = gltf.scene;
-        model.scale.set(0.5, 0.5, 0.5);
+        model.scale.set(0.1, 0.1, 0.1);
         group.add(model);
       },
       undefined,
