@@ -108,30 +108,90 @@ function setupThreeJS() {
   scene.add(directionalLight2);
 }
 
-function createCan() {
-  const group = new THREE.Group();
+// function createCan() {
+//   const group = new THREE.Group();
   
   // Check if GLTFLoader exists
-  if (typeof THREE.GLTFLoader !== 'undefined') {
-    const gltfloader = new THREE.GLTFLoader();
-    gltfloader.load("assets/redbull.glb", 
-      function (gltf) {
-        console.log("GLB loaded:", gltf);
-        console.log("Model loaded successfully!");
-        const model = gltf.scene;
-        model.scale.set(0.1, 0.1, 0.1);
-        group.add(model);
-      },
-      undefined,
-      function (error) {
-        console.log("GLB failed to load:", error);
-        // createProceduralCan(group); // Commented out as requested
-      }
-    );
-  } else {
-    console.log("GLTFLoader not available");
-    // createProceduralCan(group); // Commented out as requested
-  }
+  // if (typeof THREE.GLTFLoader !== 'undefined') {
+  //   const gltfloader = new THREE.GLTFLoader();
+  //   gltfloader.load("assets/redbull.glb", 
+  //     function (gltf) {
+  //       console.log("GLB loaded:", gltf);
+  //       console.log("Model loaded successfully!");
+  //       const model = gltf.scene;
+  //       model.scale.set(0.1, 0.1, 0.1);
+  //       group.add(model);
+  //     },
+  //     undefined,
+  //     function (error) {
+  //       console.log("GLB failed to load:", error);
+  //       // createProceduralCan(group); // Commented out as requested
+  //     }
+  //   );
+  // } else {
+  //   console.log("GLTFLoader not available");
+  //   // createProceduralCan(group); // Commented out as requested
+  // }
+
+    function createCan() {
+            const group = new THREE.Group();
+            
+            // Can body (cylinder)
+            const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xff3333,
+                shininess: 80,
+                specular: 0xeeeeee
+            });
+            const body = new THREE.Mesh(geometry, material);
+            group.add(body);
+            
+            // Can top
+            const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
+            const topMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 100 });
+            const top = new THREE.Mesh(topGeometry, topMaterial);
+            top.position.y = 0.625;
+            group.add(top);
+            
+            // Can rim
+            const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
+            const rimMaterial = new THREE.MeshPhongMaterial({ color: 0xeeeeee, shininess: 100 });
+            const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+            rim.position.y = 0.625;
+            rim.rotation.x = Math.PI / 2;
+            group.add(rim);
+            
+            // Can label
+            const labelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.8, 32);
+            const labelMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x3366ff,
+                shininess: 60
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.y = 0.1;
+            label.scale.set(1.01, 1, 1.01);
+            group.add(label);
+            
+            // Add invisible collision sphere for easier tapping
+            const collisionGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const collisionMaterial = new THREE.MeshBasicMaterial({ 
+                transparent: true, 
+                opacity: 0,
+                visible: false // Make it completely invisible
+            });
+            const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+            collisionMesh.userData.isCanCollision = true;
+            group.add(collisionMesh);
+            
+            // Add floating animation
+            group.userData = { floatTime: Math.random() * 100 };
+            
+            scene.add(group);
+            can = group;
+            
+            // Position the can further away
+            can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    }
   
   // --- PROCEDURAL CAN CODE (COMMENTED OUT) ---
   // const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
