@@ -114,6 +114,7 @@ function createCan() {
   gltfloader.load("assets/redbull.glb", function (gltf) {
     console.log(gltf);
     printGLTFInfo(gltf);
+    print("lata do carai")
     can = gltf.scene;
     can.scale.set(0.5, 0.5, 0.5);
     group.add(can);
