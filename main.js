@@ -112,6 +112,7 @@ function createCan() {
   const group = new THREE.Group();
   const gltfloader = new THREE.GLTFLoader();
   gltfloader.load("assets/redbull.glb", function (gltf) {
+    console.log(gltf);
     can = gltf.scene;
     can.scale.set(0.5, 0.5, 0.5);
     group.add(can);
