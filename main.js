@@ -108,6 +108,8 @@ function setupThreeJS() {
   scene.add(directionalLight2);
 }
 
+
+
 function createCan() {
   const group = new THREE.Group();
   const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
@@ -318,12 +320,23 @@ function startReticlePulse() {
   }, 50);
 }
 
+// function randomizeCanPosition() {
+//   const angle = Math.random() * Math.PI * 2;
+//   const distance = 12 + Math.random() * 5;
+//   canPosition.x = Math.cos(angle) * distance;
+//   canPosition.y = 1.5 + Math.random() * 2;
+//   canPosition.z = Math.sin(angle) * distance;
+//   if (can) {
+//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
+//   }
+// }
+
 function randomizeCanPosition() {
   const angle = Math.random() * Math.PI * 2;
   const distance = 12 + Math.random() * 5;
-  canPosition.x = Math.cos(angle) * distance;
-  canPosition.y = 1.5 + Math.random() * 2;
-  canPosition.z = Math.sin(angle) * distance;
+  canPosition.x = 5;
+  canPosition.y = 5;
+  canPosition.z = 5;
   if (can) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
   }
