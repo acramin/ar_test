@@ -334,7 +334,7 @@ function startReticlePulse() {
 function randomizeCanPosition() {
   const angle = Math.random() * Math.PI * 2;
   const distance = 12 + Math.random() * 5;
-  canPosition.x = 5;
+  canPosition.x = 40;
   canPosition.y = 5;
   canPosition.z = 5;
   if (can) {
