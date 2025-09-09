@@ -115,9 +115,9 @@ function createCan() {
     console.log(gltf);
     printGLTFInfo(gltf);
     print("lata do carai")
-    can = gltf.scene;
-    can.scale.set(0.5, 0.5, 0.5);
-    group.add(can);
+    const model = gltf.scene;
+    model.scale.set(0.5, 0.5, 0.5);
+    group.add(model);
     scene.add(group);
   });
   // --- IGNORE --- This is the old can model creation code, kept for reference
@@ -158,7 +158,7 @@ function createCan() {
   // label.position.y = 0.2;
   // group.add(label);
   // const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
-  // const logoMaterial = new THREE.MeshPhongMaterial({
+  // const logoMaterial = new THREE.MeshPhongMacanterial({
   //   color: 0x003366,
   //   shininess: 90,
   //   specular: 0x6699cc,
