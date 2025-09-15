@@ -55,6 +55,9 @@ function init() {
 function startGame() {
   console.log("startGame function called!");
   gameStarted = true;
+
+  randomizeCanPosition();
+
   const welcomeScreen = document.getElementById("welcome-screen");
   if (welcomeScreen) {
     welcomeScreen.classList.add("hidden");
@@ -336,7 +339,7 @@ function randomizeCanPosition() {
   const distance = 12 + Math.random() * 5;
   canPosition.x = 0; // Esquerda/Direita (Horizontal)
   canPosition.y = 0; // Cima/Baixo (Vertical)
-  canPosition.z = 0; // Frente/Fundo (Profundidade)
+  canPosition.z = 5; // Frente/Fundo (Profundidade)
   if (can) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
   }
