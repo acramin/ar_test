@@ -223,7 +223,7 @@ function startCamera() {
             `;
       if (currentFacingMode === "environment") {
         currentFacingMode = "user";
-        video.style.transform = "scaleX(-1)";
+        video.style.transform = "scaleX(1)";
         setTimeout(() => startCamera(), 1000);
       }
     });
