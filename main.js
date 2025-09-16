@@ -223,7 +223,7 @@ function startCamera() {
             `;
       if (currentFacingMode === "environment") {
         currentFacingMode = "user";
-        video.style.transform = "scaleX(1)";
+        video.style.transform = "scaleX(-1)";
         setTimeout(() => startCamera(), 1000);
       }
     });
@@ -233,7 +233,7 @@ function switchCamera() {
   currentFacingMode =
     currentFacingMode === "environment" ? "user" : "environment";
   video.style.transform =
-    currentFacingMode === "environment" ? "scaleX(-1)" : "scaleX(1)";
+    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(-1)";
   if (video.srcObject) {
     const tracks = video.srcObject.getTracks();
     tracks.forEach((track) => track.stop());
