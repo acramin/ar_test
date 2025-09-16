@@ -203,6 +203,8 @@ function startCamera() {
     .then((stream) => {
       video.srcObject = stream;
       video.play();
+      // Set initial camera transform based on facing mode
+      video.style.transform = currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(-1)";
       document.getElementById("loading").style.display = "none";
       if (!gameStarted) {
         document.getElementById("welcome-screen").style.display = "flex";
