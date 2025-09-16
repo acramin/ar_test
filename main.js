@@ -16,6 +16,51 @@ let reticlePulseInterval;
 let gameStarted = false;
 let gameCompleted = false;
 
+// Camera selection variables
+let availableCameras = [];
+let currentCameraIndex = 0;
+let selectedCameraId = null;
+
+// Get all available cameras
+async function getAvailableCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+    console.log("Available cameras:");
+    videoDevices.forEach((device, index) => {
+      console.log(`${index}: ${device.label || 'Camera ' + index} (ID: ${device.deviceId})`);
+    });
+    
+    return videoDevices;
+  } catch (error) {
+    console.error("Error getting cameras:", error);
+    return [];
+  }
+}
+
+// Initialize camera selection
+async function initCameraSelection() {
+  availableCameras = await getAvailableCameras();
+  
+  // Find back cameras
+  const backCameras = availableCameras.filter(camera => {
+    const label = camera.label.toLowerCase();
+    return label.includes('back') || 
+           label.includes('rear') || 
+           label.includes('environment') ||
+           label.includes('0'); // Often the main camera is labeled with 0
+  });
+  
+  console.log(`Back cameras found: ${backCameras.length}`);
+  if (backCameras.length > 0) {
+    selectedCameraId = backCameras[0].deviceId;
+    console.log(`Selected default camera: ${backCameras[0].label || 'Camera 0'}`);
+  }
+  
+  return backCameras;
+}
+
 // Initialize the application
 function init() {
   document.getElementById("target-count").textContent = CANS_TO_FIND;
@@ -49,7 +94,9 @@ function init() {
   randomizeCanPosition();
   animate();
   startReticlePulse();
-  startCamera();
+  initCameraSelection().then(() => {
+    startCamera();
+  });
 }
 
 function startGame() {
@@ -189,15 +236,17 @@ function setupDeviceOrientation() {
   }
 }
 
-function startCamera() {
+function startCameraWithDeviceId(deviceId) {
   video = document.getElementById("camera-video");
   const constraints = {
     video: {
-      facingMode: currentFacingMode,
+      deviceId: deviceId ? { exact: deviceId } : undefined,
+      facingMode: deviceId ? undefined : currentFacingMode,
       width: { ideal: 1280 },
       height: { ideal: 720 },
     },
   };
+  
   navigator.mediaDevices
     .getUserMedia(constraints)
     .then((stream) => {
@@ -214,13 +263,13 @@ function startCamera() {
     .catch((error) => {
       console.error("Camera error:", error);
       document.getElementById("loading").innerHTML = `
-                <div class="loader"></div>
-                <p>Erro ao acessar a câmera</p>
-                <button onclick="startCamera()" class="permission-btn">Tentar Novamente</button>
-                <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
-                    Verifique se você permitiu o acesso à câmera
-                </p>
-            `;
+        <div class="loader"></div>
+        <p>Erro ao acessar a câmera</p>
+        <button onclick="startCamera()" class="permission-btn">Tentar Novamente</button>
+        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
+          Verifique se você permitiu o acesso à câmera
+        </p>
+      `;
       if (currentFacingMode === "environment") {
         currentFacingMode = "user";
         video.style.transform = "scaleX(1)";
@@ -229,16 +278,61 @@ function startCamera() {
     });
 }
 
-function switchCamera() {
-  currentFacingMode =
-    currentFacingMode === "environment" ? "user" : "environment";
-  video.style.transform =
-    currentFacingMode === "environment" ? "scaleX(-1)" : "scaleX(1)";
-  if (video.srcObject) {
-    const tracks = video.srcObject.getTracks();
-    tracks.forEach((track) => track.stop());
+function startCamera() {
+  if (selectedCameraId) {
+    console.log("Starting camera with selected device ID");
+    startCameraWithDeviceId(selectedCameraId);
+  } else {
+    console.log("Starting camera with facingMode");
+    startCameraWithDeviceId(null);
   }
-  startCamera();
+}
+
+function switchCamera() {
+  // Get back cameras
+  const backCameras = availableCameras.filter(camera => {
+    const label = camera.label.toLowerCase();
+    return label.includes('back') || 
+          label.includes('rear') || 
+          label.includes('environment') ||
+          label.includes('0');
+  });
+  
+  if (currentFacingMode === "environment" && backCameras.length > 1) {
+    // Cycle through back cameras
+    currentCameraIndex = (currentCameraIndex + 1) % backCameras.length;
+    const selectedCamera = backCameras[currentCameraIndex];
+    selectedCameraId = selectedCamera.deviceId;
+    
+    console.log(`Switching to back camera: ${selectedCamera.label || 'Camera ' + currentCameraIndex}`);
+    
+    // Stop current camera
+    if (video.srcObject) {
+      const tracks = video.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+    }
+    
+    startCameraWithDeviceId(selectedCameraId);
+  } else {
+    // Original front/back switching
+    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+    video.style.transform = currentFacingMode === "environment" ? "scaleX(-1)" : "scaleX(1)";
+    
+    // Reset to main back camera when switching back to environment
+    if (currentFacingMode === "environment" && backCameras.length > 0) {
+      currentCameraIndex = 0;
+      selectedCameraId = backCameras[0].deviceId;
+    } else {
+      selectedCameraId = null;
+    }
+    
+    if (video.srcObject) {
+      const tracks = video.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+    }
+    
+    startCamera();
+  }
 }
 
 function onCanvasTap(event) {
