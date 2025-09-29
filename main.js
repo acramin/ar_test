@@ -404,12 +404,13 @@ function startReticlePulse() {
 
 function randomizeCanPosition() {
   // Much simpler and closer positioning
-  const distance = 3 + Math.random() * 2; // 3 to 5 units away (much closer!)
-  const angle = (Math.random() - 0.5) * Math.PI * 0.8; // -72° to +72° (narrow arc in front)
+  const distance = 3 + Math.random() * 2; // 3 to 5 units away
+  const angle = (Math.random() - 0.5) * Math.PI * 0.8; // -72° to +72° 
   
-  canPosition.x = 5; // Left/Right within narrow range
-  canPosition.y = 5; // Height: -0.5 to +0.5 (near eye level)
-  canPosition.z = 5; // Always in front, closer
+  // USE THE CALCULATED VALUES!
+  canPosition.x = Math.sin(angle) * distance; // Left/Right within narrow range
+  canPosition.y = -0.5 + Math.random() * 1; // Height: -0.5 to +0.5 (near eye level)
+  canPosition.z = -Math.cos(angle) * distance - 2; // Always in front, closer (NEGATIVE Z!)
   
   console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
   
