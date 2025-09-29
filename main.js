@@ -337,11 +337,15 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  const angle = Math.random() * Math.PI * 2;
-  const distance = 12 + Math.random() * 5;
-  canPosition.x = 1; // Esquerda/Direita (Horizontal)
-  canPosition.y = 10; // Cima/Baixo (Vertical) (VALORES NAO PODEM SER ZEROS K K)
-  canPosition.z = 1; // Frente/Fundo (Profundidade)
+  const angle = Math.random() * Math.PI * 1.5; // 0° to 270° (3/4 circle - keeps it in front)
+  const distance = 5 + Math.random() * 8; // 5 to 13 units away (closer than before)
+  
+  canPosition.x = Math.cos(angle) * distance; // Left/Right based on angle
+  canPosition.y = -1 + Math.random() * 3; // Height: -1 to +2 (eye level range)
+  canPosition.z = -Math.abs(Math.sin(angle) * distance); // Always negative Z (in front)
+  
+  console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
+  
   if (can) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
   }
