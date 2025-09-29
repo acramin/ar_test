@@ -111,9 +111,75 @@ function setupThreeJS() {
   scene.add(directionalLight2);
 }
 
-
-
 function createCan() {
+  console.log("Creating can model...");
+  
+  const group = new THREE.Group();
+  
+  // Check if GLTFLoader is available
+  if (typeof THREE.GLTFLoader !== 'undefined') {
+    console.log("GLTFLoader available: true");
+    const gltfloader = new THREE.GLTFLoader();
+    
+    console.log("Loading 3D model from: ./assets/redbull.glb");
+    
+    gltfloader.load(
+      "./assets/redbull.glb", 
+      function (gltf) {
+        console.log("✅ GLB model loaded successfully!");
+        console.log("Model data:", gltf);
+        
+        // Get the scene from the loaded model
+        const model = gltf.scene;
+        
+        // Scale the model appropriately (adjust size as needed)
+        model.scale.set(0.5, 0.5, 0.5);
+        
+        // Add the model to the group
+        group.add(model);
+        
+        console.log("✅ Custom GLB model setup complete!");
+      },
+      function (progress) {
+        // Loading progress
+        const percent = (progress.loaded / progress.total * 100).toFixed(0);
+        console.log(`Model loading progress: ${percent}%`);
+      },
+      function (error) {
+        console.log("❌ Failed to load GLB model:", error);
+        console.log("🔄 Falling back to procedural Red Bull can...");
+        createProceduralCan(group);
+      }
+    );
+  } else {
+    console.log("GLTFLoader available: false");
+    console.log("🔄 Using procedural Red Bull can...");
+    createProceduralCan(group);
+  }
+  
+  // Add collision detection sphere (works for both models)
+  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const collisionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    visible: false,
+  });
+  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  collisionMesh.userData.isCanCollision = true;
+  group.add(collisionMesh);
+  
+  // Set up group properties
+  group.userData = { floatTime: Math.random() * 100 };
+  scene.add(group);
+  
+  // Set initial reference
+  can = group;
+  can.position.set(canPosition.x, canPosition.y, canPosition.z);
+}
+
+
+
+function createCan2() {
   const group = new THREE.Group();
   const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
   const material = new THREE.MeshPhongMaterial({
