@@ -133,7 +133,7 @@ function createCan() {
         const model = gltf.scene;
         
         // Scale the model appropriately (adjust size as needed)
-        model.scale.set(0.2, 0.2, 0.2);
+        model.scale.set(0.05, 0.05, 0.05);
         
         // Add the model to the group
         group.add(model);
