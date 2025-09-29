@@ -95,7 +95,8 @@ function setupThreeJS() {
     0.1,
     1000
   );
-  camera.position.z = 5;
+  camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
+  
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -403,30 +404,14 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  const forward = new THREE.Vector3(0, 0, -1); // Camera's forward direction
-  const right = new THREE.Vector3(1, 0, 0);    // Camera's right direction
-  const up = new THREE.Vector3(0, 1, 0);       // Camera's up direction
-  
-  // Apply camera rotation to directions
-  forward.applyQuaternion(camera.quaternion);
-  right.applyQuaternion(camera.quaternion);
-  up.applyQuaternion(camera.quaternion);
-  
-  // Random position in front of camera
   const distance = 4 + Math.random() * 2; // 4-6 units away
-  const sideOffset = (Math.random() - 0.5) * 3; // -1.5 to +1.5 to the side
-  const upOffset = (Math.random() - 0.5) * 1; // -0.5 to +0.5 up/down
+  const sideOffset = (Math.random() - 0.5) * 4; // -2 to +2 to the side
+  const heightOffset = Math.random() * 1; // 0 to +1 above eye level
   
-  // Calculate final position
-  const targetPos = new THREE.Vector3()
-    .copy(camera.position)
-    .add(forward.multiplyScalar(distance))
-    .add(right.multiplyScalar(sideOffset))
-    .add(up.multiplyScalar(upOffset));
-  
-  canPosition.x = targetPos.x;
-  canPosition.y = targetPos.y;
-  canPosition.z = targetPos.z;
+  // Position relative to camera but ensure it's always in front and at good height
+  canPosition.x = camera.position.x + sideOffset;
+  canPosition.y = camera.position.y + heightOffset; // Camera is now at 1.6, so this puts can at 1.6-2.6
+  canPosition.z = camera.position.z - distance; // Always in front (negative Z from camera)
   
   console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
   console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
@@ -435,6 +420,7 @@ function randomizeCanPosition() {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
   }
 }
+
 
 function resetGame() {
   foundCan = false;
