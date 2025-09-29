@@ -403,14 +403,33 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  const distance = 3 + Math.random() * 2; // 3 to 5 units away
-  const angle = (Math.random() - 0.5) * Math.PI * 0.8; // -72° to +72° 
+  const forward = new THREE.Vector3(0, 0, -1); // Camera's forward direction
+  const right = new THREE.Vector3(1, 0, 0);    // Camera's right direction
+  const up = new THREE.Vector3(0, 1, 0);       // Camera's up direction
   
-  canPosition.x = Math.sin(angle) * distance; 
-  canPosition.y = 1 + Math.random() * 2; // Height: 1 to 3 (HIGHER - above eye level)
-  canPosition.z = -Math.cos(angle) * distance - 2; 
+  // Apply camera rotation to directions
+  forward.applyQuaternion(camera.quaternion);
+  right.applyQuaternion(camera.quaternion);
+  up.applyQuaternion(camera.quaternion);
+  
+  // Random position in front of camera
+  const distance = 4 + Math.random() * 2; // 4-6 units away
+  const sideOffset = (Math.random() - 0.5) * 3; // -1.5 to +1.5 to the side
+  const upOffset = (Math.random() - 0.5) * 1; // -0.5 to +0.5 up/down
+  
+  // Calculate final position
+  const targetPos = new THREE.Vector3()
+    .copy(camera.position)
+    .add(forward.multiplyScalar(distance))
+    .add(right.multiplyScalar(sideOffset))
+    .add(up.multiplyScalar(upOffset));
+  
+  canPosition.x = targetPos.x;
+  canPosition.y = targetPos.y;
+  canPosition.z = targetPos.z;
   
   console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
+  console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   
   if (can) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
