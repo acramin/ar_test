@@ -403,14 +403,12 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  // Much simpler and closer positioning
   const distance = 3 + Math.random() * 2; // 3 to 5 units away
   const angle = (Math.random() - 0.5) * Math.PI * 0.8; // -72° to +72° 
   
-  // USE THE CALCULATED VALUES!
-  canPosition.x = Math.sin(angle) * distance; // Left/Right within narrow range
-  canPosition.y = -0.5 + Math.random() * 1; // Height: -0.5 to +0.5 (near eye level)
-  canPosition.z = -Math.cos(angle) * distance - 2; // Always in front, closer (NEGATIVE Z!)
+  canPosition.x = Math.sin(angle) * distance; 
+  canPosition.y = 1 + Math.random() * 2; // Height: 1 to 3 (HIGHER - above eye level)
+  canPosition.z = -Math.cos(angle) * distance - 2; 
   
   console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
   
@@ -442,9 +440,14 @@ function animate() {
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.userData.floatTime += 0.01;
+    // Keep the floating effect but relative to the original position
     can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
     can.rotation.y += 0.01;
     can.visible = true;
+    
+    // Debug: Log can position relative to camera
+    console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+    console.log(`Camera at: x=0, y=0, z=5`);
   } else if (can && (!gameStarted || gameCompleted)) {
     can.visible = false;
   }
