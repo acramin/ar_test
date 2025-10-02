@@ -447,14 +447,14 @@ function animate() {
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.userData.floatTime += 0.01;
-    // Keep the floating effect but relative to the original position
-    can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-    can.rotation.z += 0.01;
+    // FIX: Keep the floating effect on Y position (up/down), not Z position!
+    can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+    can.rotation.y += 0.01; // Also fix rotation to Y-axis for vertical spinning
     can.visible = true;
     
     // Debug: Log can position relative to camera
     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
-    console.log(`Camera at: x=0, y=0, z=5`);
+    console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   } else if (can && (!gameStarted || gameCompleted)) {
     can.visible = false;
   }
