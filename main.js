@@ -406,9 +406,13 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  const distance = 30 + Math.random() * 2; // 20-22 units away
-  const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
-  const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
+  // const distance = 30 + Math.random() * 2; // 20-22 units away
+  // const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
+  // const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
+
+  const distance = 10; // 20-22 units away
+  const sideOffset = 10; // -4.5 to +4.5 to the side
+  const heightOffset = 10; // 5 to +7 above eye level
   
   // Position relative to camera but ensure it's always in front and at good height
   canPosition.x = camera.position.x + sideOffset;
