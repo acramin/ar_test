@@ -415,7 +415,7 @@ function randomizeCanPosition() {
   const heightOffset = 30; // 5 to +7 above eye level
   
   // Position relative to camera but ensure it's always in front and at good height
-  canPosition.x = 0;
+  canPosition.x = 10;
   canPosition.y = 1.6; // Camera is now at 1.6, so this puts can at 1.6-2.6
   canPosition.z = 5; // Always in front (negative Z from camera)
   
