@@ -400,7 +400,7 @@ function randomizeCanPosition() {
   if (!camera) return;
 
   // Calculate position in front of camera using spherical coordinates
-  const distance = 3 + Math.random() * 2; // 3-5 meters away
+  const distance = 10 + Math.random() * 2; // 3-5 meters away
   
   // Random horizontal angle (-30 to +30 degrees from center)
   const horizontalAngle = (Math.random() - 0.5) * Math.PI / 3; 
