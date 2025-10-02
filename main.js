@@ -189,10 +189,10 @@ function createCan() {
   can.position.set(canPosition.x, canPosition.y, canPosition.z);
 }
 
-
-
-function createCan2() {
-  const group = new THREE.Group();
+// Add the missing createProceduralCan function
+function createProceduralCan(group) {
+  console.log("Creating procedural can...");
+  
   const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
   const material = new THREE.MeshPhongMaterial({
     color: 0xff0000,
@@ -201,6 +201,7 @@ function createCan2() {
   });
   const body = new THREE.Mesh(geometry, material);
   group.add(body);
+  
   const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
   const topMaterial = new THREE.MeshPhongMaterial({
     color: 0xeeeeee,
@@ -210,6 +211,7 @@ function createCan2() {
   const top = new THREE.Mesh(topGeometry, topMaterial);
   top.position.y = 0.625;
   group.add(top);
+  
   const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
   const rimMaterial = new THREE.MeshPhongMaterial({
     color: 0xffffff,
@@ -220,6 +222,7 @@ function createCan2() {
   rim.position.y = 0.625;
   rim.rotation.x = Math.PI / 2;
   group.add(rim);
+  
   const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
   const labelMaterial = new THREE.MeshPhongMaterial({
     color: 0xff9900,
@@ -229,6 +232,7 @@ function createCan2() {
   const label = new THREE.Mesh(labelGeometry, labelMaterial);
   label.position.y = 0.2;
   group.add(label);
+  
   const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
   const logoMaterial = new THREE.MeshPhongMaterial({
     color: 0x003366,
@@ -238,19 +242,8 @@ function createCan2() {
   const logo = new THREE.Mesh(logoGeometry, logoMaterial);
   logo.position.y = -0.1;
   group.add(logo);
-  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
-  const collisionMaterial = new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    visible: false,
-  });
-  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
-  collisionMesh.userData.isCanCollision = true;
-  group.add(collisionMesh);
-  group.userData = { floatTime: Math.random() * 100 };
-  scene.add(group);
-  can = group;
-  can.position.set(canPosition.x, canPosition.y, canPosition.z);
+  
+  console.log("✅ Procedural can created!");
 }
 
 function setupDeviceOrientation() {
@@ -313,7 +306,7 @@ function switchCamera() {
   currentFacingMode =
     currentFacingMode === "environment" ? "user" : "environment";
   video.style.transform =
-    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(1)";
+    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(-1)";
   if (video.srcObject) {
     const tracks = video.srcObject.getTracks();
     tracks.forEach((track) => track.stop());
@@ -340,7 +333,7 @@ function onCanvasTap(event) {
   let hitCan = false;
   for (let i = 0; i < intersects.length; i++) {
     console.log("Intersection", i, ":", intersects[i].object);
-    if (intersects[i].object.parent === can || intersects[i].object === can) {
+    if (intersects[i].object.userData.isCanCollision || intersects[i].object.parent === can || intersects[i].object === can) {
       hitCan = true;
       console.log("HIT CAN!");
       break;
@@ -403,17 +396,6 @@ function startReticlePulse() {
   }, 50);
 }
 
-// function randomizeCanPosition() {
-//   const angle = Math.random() * Math.PI * 2;
-//   const distance = 12 + Math.random() * 5;
-//   canPosition.x = Math.cos(angle) * distance;
-//   canPosition.y = 1.5 + Math.random() * 2;
-//   canPosition.z = Math.sin(angle) * distance;
-//   if (can) {
-//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
-//   }
-// }
-
 function randomizeCanPosition() {
   if (!camera) return;
 
@@ -438,40 +420,19 @@ function randomizeCanPosition() {
     can.userData.floatTime = Math.random() * 100;
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
     
+    // Call debug position
+    debugPosition();
+    
     // Debug logging
     console.log(`Can positioned at: X:${canPosition.x.toFixed(2)}, Y:${canPosition.y.toFixed(2)}, Z:${canPosition.z.toFixed(2)}`);
   }
 }
-
-// function animate() {
-//   requestAnimationFrame(animate);
-//   if (camera) {
-//     camera.rotation.set(beta, alpha, gamma, "YXZ");
-//   }
-//   if (can && !foundCan && gameStarted && !gameCompleted) {
-//     can.userData.floatTime += 0.01;
-//     // Keep the floating effect but relative to the original position
-//     can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-//     can.rotation.z += 0.01;
-//     can.visible = true;
-    
-//     // Debug: Log can position relative to camera
-//     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
-//     console.log(`Camera at: x=0, y=0, z=5`);
-//   } else if (can && (!gameStarted || gameCompleted)) {
-//     can.visible = false;
-//   }
-//   if (renderer && scene && camera) {
-//     renderer.render(scene, camera);
-//   }
-// }
 
 function animate() {
   requestAnimationFrame(animate);
   
   if (camera) {
     // Apply device orientation to camera with proper coordinate system
-    // Note: Device orientation angles might need adjustment based on device
     camera.rotation.set(beta + Math.PI/2, alpha, -gamma, 'YXZ');
   }
   
@@ -510,6 +471,38 @@ function debugPosition() {
   }
 }
 
+// Add missing game reset functions
+function resetGame() {
+  console.log("Resetting game...");
+  foundCount = 0;
+  foundCan = false;
+  gameCompleted = false;
+  document.getElementById("found-count").textContent = foundCount;
+  document.getElementById("game-complete-popup").classList.remove("visible");
+  randomizeCanPosition();
+}
+
+function restartCompleteGame() {
+  console.log("Restarting complete game...");
+  foundCount = 0;
+  foundCan = false;
+  gameCompleted = false;
+  gameStarted = true;
+  document.getElementById("found-count").textContent = foundCount;
+  document.getElementById("game-complete-popup").classList.remove("visible");
+  document.getElementById("congrats-popup").classList.remove("visible");
+  randomizeCanPosition();
+}
+
+// Add missing popup close function
+function closeCongratsPopup() {
+  document.getElementById("congrats-popup").classList.remove("visible");
+  foundCan = false;
+  setTimeout(() => {
+    randomizeCanPosition();
+  }, 500);
+}
+
 window.addEventListener("resize", () => {
   if (camera) {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -522,10 +515,8 @@ window.addEventListener("resize", () => {
 
 window.addEventListener("load", init);
 
-function testButton() {
-  console.log("Test button clicked!");
-  alert("Button is working!");
-}
+// Make debug function available globally
+window.debugPosition = debugPosition;
 
 window.startGameFromButton = function () {
   console.log("Starting game from button click");
