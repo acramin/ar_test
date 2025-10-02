@@ -95,27 +95,18 @@ function setupThreeJS() {
     0.1,
     1000
   );
-  
-  // Start camera at origin - this is crucial for AR
-  camera.position.set(0, 0, 0);
+  camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
   
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   document.getElementById("canvas-container").appendChild(renderer.domElement);
-  
-  const axesHelper = new THREE.AxesHelper(5);
-  scene.add(axesHelper);
-
   createCan();
-  
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
-  
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
-  
   const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
   directionalLight2.position.set(-1, -1, -1);
   scene.add(directionalLight2);
@@ -189,10 +180,10 @@ function createCan() {
   can.position.set(canPosition.x, canPosition.y, canPosition.z);
 }
 
-// Add the missing createProceduralCan function
-function createProceduralCan(group) {
-  console.log("Creating procedural can...");
-  
+
+
+function createCan2() {
+  const group = new THREE.Group();
   const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
   const material = new THREE.MeshPhongMaterial({
     color: 0xff0000,
@@ -201,7 +192,6 @@ function createProceduralCan(group) {
   });
   const body = new THREE.Mesh(geometry, material);
   group.add(body);
-  
   const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
   const topMaterial = new THREE.MeshPhongMaterial({
     color: 0xeeeeee,
@@ -211,7 +201,6 @@ function createProceduralCan(group) {
   const top = new THREE.Mesh(topGeometry, topMaterial);
   top.position.y = 0.625;
   group.add(top);
-  
   const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
   const rimMaterial = new THREE.MeshPhongMaterial({
     color: 0xffffff,
@@ -222,7 +211,6 @@ function createProceduralCan(group) {
   rim.position.y = 0.625;
   rim.rotation.x = Math.PI / 2;
   group.add(rim);
-  
   const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
   const labelMaterial = new THREE.MeshPhongMaterial({
     color: 0xff9900,
@@ -232,7 +220,6 @@ function createProceduralCan(group) {
   const label = new THREE.Mesh(labelGeometry, labelMaterial);
   label.position.y = 0.2;
   group.add(label);
-  
   const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
   const logoMaterial = new THREE.MeshPhongMaterial({
     color: 0x003366,
@@ -242,8 +229,19 @@ function createProceduralCan(group) {
   const logo = new THREE.Mesh(logoGeometry, logoMaterial);
   logo.position.y = -0.1;
   group.add(logo);
-  
-  console.log("✅ Procedural can created!");
+  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const collisionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    visible: false,
+  });
+  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  collisionMesh.userData.isCanCollision = true;
+  group.add(collisionMesh);
+  group.userData = { floatTime: Math.random() * 100 };
+  scene.add(group);
+  can = group;
+  can.position.set(canPosition.x, canPosition.y, canPosition.z);
 }
 
 function setupDeviceOrientation() {
@@ -306,7 +304,7 @@ function switchCamera() {
   currentFacingMode =
     currentFacingMode === "environment" ? "user" : "environment";
   video.style.transform =
-    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(-1)";
+    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(1)";
   if (video.srcObject) {
     const tracks = video.srcObject.getTracks();
     tracks.forEach((track) => track.stop());
@@ -333,7 +331,7 @@ function onCanvasTap(event) {
   let hitCan = false;
   for (let i = 0; i < intersects.length; i++) {
     console.log("Intersection", i, ":", intersects[i].object);
-    if (intersects[i].object.userData.isCanCollision || intersects[i].object.parent === can || intersects[i].object === can) {
+    if (intersects[i].object.parent === can || intersects[i].object === can) {
       hitCan = true;
       console.log("HIT CAN!");
       break;
@@ -396,111 +394,98 @@ function startReticlePulse() {
   }, 50);
 }
 
+// function randomizeCanPosition() {
+//   const angle = Math.random() * Math.PI * 2;
+//   const distance = 12 + Math.random() * 5;
+//   canPosition.x = Math.cos(angle) * distance;
+//   canPosition.y = 1.5 + Math.random() * 2;
+//   canPosition.z = Math.sin(angle) * distance;
+//   if (can) {
+//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
+//   }
+// }
+
 function randomizeCanPosition() {
-  if (!camera) return;
+  // const distance = 30 + Math.random() * 2; // 20-22 units away
+  // const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
+  // const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
 
-  // Calculate position in front of camera using spherical coordinates
-  const distance = 20 + Math.random() * 2; // 3-5 meters away
+  const distance = 10; // 20-22 units away
+  const sideOffset = 10; // -4.5 to +4.5 to the side
+  const heightOffset = 30; // 5 to +7 above eye level
   
-  // Random horizontal angle (-30 to +30 degrees from center)
-  const horizontalAngle = (Math.random() - 0.5) * Math.PI / 3; 
+  // Position relative to camera but ensure it's always in front and at good height
+  canPosition.x = 10;
+  canPosition.y = 1.6; // Camera is now at 1.6, so this puts can at 1.6-2.6
+  canPosition.z = 5; // Always in front (negative Z from camera)
   
-  // Random vertical angle (-15 to +15 degrees from horizon)
-  const verticalAngle = (Math.random() - 0.5) * Math.PI / 6;
+  console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
+  console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   
-  // Calculate position using spherical to cartesian conversion
-  canPosition.x = Math.sin(horizontalAngle) * distance;
-  canPosition.y = Math.sin(verticalAngle) * distance;
-  canPosition.z = -Math.cos(horizontalAngle) * Math.cos(verticalAngle) * distance;
-  
-  // Add some height variation (0.5 to 1.5 meters from ground)
-  canPosition.y += 1.0 + (Math.random() - 0.5) * 1.0;
-
   if (can) {
-    can.userData.floatTime = Math.random() * 100;
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
-    
-    // Call debug position
-    debugPosition();
-    
-    // Debug logging
-    console.log(`Can positioned at: X:${canPosition.x.toFixed(2)}, Y:${canPosition.y.toFixed(2)}, Z:${canPosition.z.toFixed(2)}`);
   }
 }
 
-function animate() {
-  requestAnimationFrame(animate);
-  
-  if (camera) {
-    // Apply device orientation to camera with proper coordinate system
-    camera.rotation.set(beta + Math.PI/2, alpha, -gamma, 'YXZ');
-  }
-  
-  if (can && !foundCan && gameStarted && !gameCompleted) {
-    can.userData.floatTime += 0.01;
-    const floatOffset = Math.sin(can.userData.floatTime) * 0.15;
-    
-    // Maintain the can's world position while floating
-    can.position.y = canPosition.y + floatOffset;
-    can.rotation.y += 0.01;
-    can.visible = true;
-  } else if (can && (!gameStarted || gameCompleted)) {
-    can.visible = false;
-  }
-  
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera);
-  }
-}
 
-function debugPosition() {
-  if (camera && can) {
-    const cameraWorldPos = new THREE.Vector3();
-    const canWorldPos = new THREE.Vector3();
-    
-    camera.getWorldPosition(cameraWorldPos);
-    can.getWorldPosition(canWorldPos);
-    
-    const distance = cameraWorldPos.distanceTo(canWorldPos);
-    
-    console.log('=== DEBUG POSITION ===');
-    console.log(`Camera: X:${cameraWorldPos.x.toFixed(2)}, Y:${cameraWorldPos.y.toFixed(2)}, Z:${cameraWorldPos.z.toFixed(2)}`);
-    console.log(`Can: X:${canWorldPos.x.toFixed(2)}, Y:${canWorldPos.y.toFixed(2)}, Z:${canWorldPos.z.toFixed(2)}`);
-    console.log(`Distance: ${distance.toFixed(2)} units`);
-    console.log('======================');
-  }
-}
-
-// Add missing game reset functions
 function resetGame() {
-  console.log("Resetting game...");
-  foundCount = 0;
   foundCan = false;
-  gameCompleted = false;
-  document.getElementById("found-count").textContent = foundCount;
-  document.getElementById("game-complete-popup").classList.remove("visible");
+  document.getElementById("congrats-popup").classList.remove("visible");
   randomizeCanPosition();
 }
 
 function restartCompleteGame() {
-  console.log("Restarting complete game...");
-  foundCount = 0;
   foundCan = false;
+  foundCount = 0;
   gameCompleted = false;
-  gameStarted = true;
-  document.getElementById("found-count").textContent = foundCount;
+  document.getElementById("found-count").textContent = "0";
   document.getElementById("game-complete-popup").classList.remove("visible");
-  document.getElementById("congrats-popup").classList.remove("visible");
   randomizeCanPosition();
+  console.log("Game restarted - looking for", CANS_TO_FIND, "cans again!");
 }
 
-// Add missing popup close function
-function closeCongratsPopup() {
-  document.getElementById("congrats-popup").classList.remove("visible");
-  foundCan = false;
-  setTimeout(() => {
-    randomizeCanPosition();
-  }, 500);
+// function animate() {
+//   requestAnimationFrame(animate);
+//   if (camera) {
+//     camera.rotation.set(beta, alpha, gamma, "YXZ");
+//   }
+//   if (can && !foundCan && gameStarted && !gameCompleted) {
+//     can.userData.floatTime += 0.01;
+//     // Keep the floating effect but relative to the original position
+//     can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+//     can.rotation.z += 0.01;
+//     can.visible = true;
+    
+//     // Debug: Log can position relative to camera
+//     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+//     console.log(`Camera at: x=0, y=0, z=5`);
+//   } else if (can && (!gameStarted || gameCompleted)) {
+//     can.visible = false;
+//   }
+//   if (renderer && scene && camera) {
+//     renderer.render(scene, camera);
+//   }
+// }
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (camera) {
+    camera.rotation.set(beta, alpha, gamma, "YXZ");
+  }
+  if (can && !foundCan && gameStarted && !gameCompleted) {
+    // NO ANIMATION - can stays perfectly still at its original position
+    can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    can.visible = true;
+    
+    // Debug: Log can position relative to camera
+    console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+    console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
+  } else if (can && (!gameStarted || gameCompleted)) {
+    can.visible = false;
+  }
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
 }
 
 window.addEventListener("resize", () => {
@@ -515,8 +500,10 @@ window.addEventListener("resize", () => {
 
 window.addEventListener("load", init);
 
-// Make debug function available globally
-window.debugPosition = debugPosition;
+function testButton() {
+  console.log("Test button clicked!");
+  alert("Button is working!");
+}
 
 window.startGameFromButton = function () {
   console.log("Starting game from button click");
