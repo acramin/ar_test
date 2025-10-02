@@ -440,16 +440,37 @@ function restartCompleteGame() {
   console.log("Game restarted - looking for", CANS_TO_FIND, "cans again!");
 }
 
+// function animate() {
+//   requestAnimationFrame(animate);
+//   if (camera) {
+//     camera.rotation.set(beta, alpha, gamma, "YXZ");
+//   }
+//   if (can && !foundCan && gameStarted && !gameCompleted) {
+//     can.userData.floatTime += 0.01;
+//     // Keep the floating effect but relative to the original position
+//     can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+//     can.rotation.z += 0.01;
+//     can.visible = true;
+    
+//     // Debug: Log can position relative to camera
+//     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+//     console.log(`Camera at: x=0, y=0, z=5`);
+//   } else if (can && (!gameStarted || gameCompleted)) {
+//     can.visible = false;
+//   }
+//   if (renderer && scene && camera) {
+//     renderer.render(scene, camera);
+//   }
+// }
+
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
     camera.rotation.set(beta, alpha, gamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
-    can.userData.floatTime += 0.01;
-    // FIX: Keep the floating effect on Y position (up/down), not Z position!
-    can.position.y = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-    can.rotation.y += 0.01; // Also fix rotation to Y-axis for vertical spinning
+    // NO ANIMATION - can stays perfectly still at its original position
+    can.position.set(canPosition.x, canPosition.y, canPosition.z);
     can.visible = true;
     
     // Debug: Log can position relative to camera
