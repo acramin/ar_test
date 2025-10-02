@@ -406,42 +406,30 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  // const distance = 30 + Math.random() * 2; // 20-22 units away
-  // const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
-  // const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
+  if (!camera) return;
 
-  const distance = 10; // 20-22 units away
-  const sideOffset = 10; // -4.5 to +4.5 to the side
-  const heightOffset = 30; // 5 to +7 above eye level
-  
-  // Position relative to camera but ensure it's always in front and at good height
-  canPosition.x = 10;
-  canPosition.y = -3; // Camera is now at 1.6, so this puts can at 1.6-2.6
-  canPosition.z = -10; // Always in front (negative Z from camera)
-  
-  console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
-  console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
-  
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+
+  const distance = 3 + Math.random() * 2;
+  const sideOffset = (Math.random() - 0.5) * 2;
+  const verticalOffset = -0.3 + Math.random() * 0.8;
+
+  const target = new THREE.Vector3()
+    .copy(camera.position)
+    .add(forward.multiplyScalar(distance))
+    .add(right.multiplyScalar(sideOffset))
+    .add(up.multiplyScalar(verticalOffset));
+
+  canPosition.x = target.x;
+  canPosition.y = target.y;
+  canPosition.z = target.z;
+
   if (can) {
-    can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    can.userData.floatTime = Math.random() * 100;
+    can.position.copy(target);
   }
-}
-
-
-function resetGame() {
-  foundCan = false;
-  document.getElementById("congrats-popup").classList.remove("visible");
-  randomizeCanPosition();
-}
-
-function restartCompleteGame() {
-  foundCan = false;
-  foundCount = 0;
-  gameCompleted = false;
-  document.getElementById("found-count").textContent = "0";
-  document.getElementById("game-complete-popup").classList.remove("visible");
-  randomizeCanPosition();
-  console.log("Game restarted - looking for", CANS_TO_FIND, "cans again!");
 }
 
 // function animate() {
@@ -473,13 +461,16 @@ function animate() {
     camera.rotation.set(beta, alpha, gamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
-    // NO ANIMATION - can stays perfectly still at its original position
-    can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    can.userData.floatTime += 0.01;
+    const floatOffset = Math.sin(can.userData.floatTime) * 0.15;
+
+    can.position.set(
+      canPosition.x,
+      canPosition.y + floatOffset,
+      canPosition.z
+    );
+    can.rotation.y += 0.01;
     can.visible = true;
-    
-    // Debug: Log can position relative to camera
-    console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
-    console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   } else if (can && (!gameStarted || gameCompleted)) {
     can.visible = false;
   }
