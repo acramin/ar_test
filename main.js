@@ -448,8 +448,8 @@ function animate() {
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.userData.floatTime += 0.01;
     // Keep the floating effect but relative to the original position
-    can.position.x = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-    can.rotation.x += 0.01;
+    can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
+    can.rotation.z += 0.01;
     can.visible = true;
     
     // Debug: Log can position relative to camera
