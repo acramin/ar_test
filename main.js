@@ -95,18 +95,27 @@ function setupThreeJS() {
     0.1,
     1000
   );
-  camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
+  
+  // Start camera at origin - this is crucial for AR
+  camera.position.set(0, 0, 0);
   
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   document.getElementById("canvas-container").appendChild(renderer.domElement);
+  
+  const axesHelper = new THREE.AxesHelper(5);
+  scene.add(axesHelper);
+
   createCan();
+  
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
+  
   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(1, 1, 1);
   scene.add(directionalLight);
+  
   const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
   directionalLight2.position.set(-1, -1, -1);
   scene.add(directionalLight2);
@@ -408,27 +417,29 @@ function startReticlePulse() {
 function randomizeCanPosition() {
   if (!camera) return;
 
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
-  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
-
-  const distance = 3 + Math.random() * 2;
-  const sideOffset = (Math.random() - 0.5) * 2;
-  const verticalOffset = -0.3 + Math.random() * 0.8;
-
-  const target = new THREE.Vector3()
-    .copy(camera.position)
-    .add(forward.multiplyScalar(distance))
-    .add(right.multiplyScalar(sideOffset))
-    .add(up.multiplyScalar(verticalOffset));
-
-  canPosition.x = target.x;
-  canPosition.y = target.y;
-  canPosition.z = target.z;
+  // Calculate position in front of camera using spherical coordinates
+  const distance = 3 + Math.random() * 2; // 3-5 meters away
+  
+  // Random horizontal angle (-30 to +30 degrees from center)
+  const horizontalAngle = (Math.random() - 0.5) * Math.PI / 3; 
+  
+  // Random vertical angle (-15 to +15 degrees from horizon)
+  const verticalAngle = (Math.random() - 0.5) * Math.PI / 6;
+  
+  // Calculate position using spherical to cartesian conversion
+  canPosition.x = Math.sin(horizontalAngle) * distance;
+  canPosition.y = Math.sin(verticalAngle) * distance;
+  canPosition.z = -Math.cos(horizontalAngle) * Math.cos(verticalAngle) * distance;
+  
+  // Add some height variation (0.5 to 1.5 meters from ground)
+  canPosition.y += 1.0 + (Math.random() - 0.5) * 1.0;
 
   if (can) {
     can.userData.floatTime = Math.random() * 100;
-    can.position.copy(target);
+    can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    
+    // Debug logging
+    console.log(`Can positioned at: X:${canPosition.x.toFixed(2)}, Y:${canPosition.y.toFixed(2)}, Z:${canPosition.z.toFixed(2)}`);
   }
 }
 
@@ -457,25 +468,45 @@ function randomizeCanPosition() {
 
 function animate() {
   requestAnimationFrame(animate);
+  
   if (camera) {
-    camera.rotation.set(beta, alpha, gamma, "YXZ");
+    // Apply device orientation to camera with proper coordinate system
+    // Note: Device orientation angles might need adjustment based on device
+    camera.rotation.set(beta + Math.PI/2, alpha, -gamma, 'YXZ');
   }
+  
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.userData.floatTime += 0.01;
     const floatOffset = Math.sin(can.userData.floatTime) * 0.15;
-
-    can.position.set(
-      canPosition.x,
-      canPosition.y + floatOffset,
-      canPosition.z
-    );
+    
+    // Maintain the can's world position while floating
+    can.position.y = canPosition.y + floatOffset;
     can.rotation.y += 0.01;
     can.visible = true;
   } else if (can && (!gameStarted || gameCompleted)) {
     can.visible = false;
   }
+  
   if (renderer && scene && camera) {
     renderer.render(scene, camera);
+  }
+}
+
+function debugPosition() {
+  if (camera && can) {
+    const cameraWorldPos = new THREE.Vector3();
+    const canWorldPos = new THREE.Vector3();
+    
+    camera.getWorldPosition(cameraWorldPos);
+    can.getWorldPosition(canWorldPos);
+    
+    const distance = cameraWorldPos.distanceTo(canWorldPos);
+    
+    console.log('=== DEBUG POSITION ===');
+    console.log(`Camera: X:${cameraWorldPos.x.toFixed(2)}, Y:${cameraWorldPos.y.toFixed(2)}, Z:${cameraWorldPos.z.toFixed(2)}`);
+    console.log(`Can: X:${canWorldPos.x.toFixed(2)}, Y:${canWorldPos.y.toFixed(2)}, Z:${canWorldPos.z.toFixed(2)}`);
+    console.log(`Distance: ${distance.toFixed(2)} units`);
+    console.log('======================');
   }
 }
 
