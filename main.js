@@ -132,7 +132,7 @@ function createCan() {
         
         // Get the scene from the loaded model
         const model = gltf.scene;
-        model.rotation.x = Math.PI / 2;
+        model.rotation.z = Math.PI / 2;
         // Scale the model appropriately (adjust size as needed)
         model.scale.set(0.05, 0.05, 0.05);
         
