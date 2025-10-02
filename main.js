@@ -406,7 +406,7 @@ function startReticlePulse() {
 // }
 
 function randomizeCanPosition() {
-  const distance = 10 + Math.random() * 2; // 10-12 units away
+  const distance = 20 + Math.random() * 2; // 20-22 units away
   const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
   const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
   
