@@ -594,11 +594,11 @@ function animate() {
   requestAnimationFrame(animate);
   if (camera) {
     // Fix: Adjust beta to compensate for holding phone upright
-    const adjustedBeta = beta + Math.PI / 2; // Subtract 90 degrees
+    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
     
     // Limit gamma (roll) to prevent wild spinning when tilting phone sideways
     const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, gamma)); // Limit to ±45°
-
+    
     camera.rotation.set(0, 0, 0, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
