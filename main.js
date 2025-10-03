@@ -604,10 +604,11 @@ function animate() {
     const adjustedBeta = (beta - Math.PI / 2) * CAMERA_SENSITIVITY.beta;
     const adjustedGamma = gamma * CAMERA_SENSITIVITY.gamma;
     
-    // Optionally clamp gamma to prevent wild spinning
-    //const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, adjustedGamma));
-    
+    // Set camera rotation
     camera.rotation.set(adjustedBeta, adjustedAlpha, adjustedGamma, "YXZ");
+    
+    // Log the raw and adjusted values for debugging
+    console.log(`Alpha: ${(alpha * 180 / Math.PI).toFixed(1)}° → ${(adjustedAlpha * 180 / Math.PI).toFixed(1)}°`);
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
