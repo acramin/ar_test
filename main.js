@@ -593,7 +593,7 @@ function restartCompleteGame() {
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
-    camera.rotation.set(beta - (Math.PI / 2), alpha, 0, "YXZ");
+    camera.rotation.set(beta - (Math.PI / 2), 0, 0, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     // NO ANIMATION - can stays perfectly still at its original position
