@@ -601,7 +601,7 @@ function animate() {
   if (camera) {
     // Apply sensitivity scaling to each axis
     const adjustedAlpha = alpha * CAMERA_SENSITIVITY.alpha;
-    const adjustedBeta = beta * CAMERA_SENSITIVITY.beta;
+    const adjustedBeta = (beta - Math.PI / 2) * CAMERA_SENSITIVITY.beta;
     const adjustedGamma = gamma * CAMERA_SENSITIVITY.gamma;
     
     // Optionally clamp gamma to prevent wild spinning
