@@ -595,7 +595,9 @@ function animate() {
   if (camera) {
     // Fix: Adjust beta to compensate for holding phone upright
     // When phone is upright, beta ≈ 0, but we want camera to look forward
-    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
+    const adjustedBeta = beta - Math.PI / 2;
+    camera.rotation.order = 'ZYX'; // Different order reduces roll sensitivity
+    camera.rotation.set(gamma, alpha, adjustedBeta);
     // camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ"); // Removed to prevent camera rotation with device orientation
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
