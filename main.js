@@ -601,13 +601,13 @@ function animate() {
   if (camera) {
     // Apply sensitivity scaling to each axis
     const adjustedAlpha = alpha * CAMERA_SENSITIVITY.alpha;
-    const adjustedBeta = (beta - Math.PI / 2) * CAMERA_SENSITIVITY.beta;
+    const adjustedBeta = beta * CAMERA_SENSITIVITY.beta;
     const adjustedGamma = gamma * CAMERA_SENSITIVITY.gamma;
     
     // Optionally clamp gamma to prevent wild spinning
-    const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, adjustedGamma));
+    //const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, adjustedGamma));
     
-    camera.rotation.set(adjustedBeta, adjustedAlpha, clampedGamma, "YXZ");
+    camera.rotation.set(adjustedBeta, adjustedAlpha, adjustedGamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
