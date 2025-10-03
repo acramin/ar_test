@@ -416,8 +416,8 @@ function randomizeCanPosition() {
   
   // Position relative to camera but ensure it's always in front and at good height
   canPosition.x = 10;
-  canPosition.y = 1.6; // Camera is now at 1.6, so this puts can at 1.6-2.6
-  canPosition.z = 5; // Always in front (negative Z from camera)
+  canPosition.y = 10; // Camera is now at 1.6, so this puts can at 1.6-2.6
+  canPosition.z = 10; // Always in front (negative Z from camera)
   
   console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
   console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
