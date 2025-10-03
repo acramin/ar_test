@@ -2,6 +2,12 @@
 // GAME CONFIGURATION - Change this number to set how many cans need to be found
 const CANS_TO_FIND = 3; // Easy to change for testing different amounts!
 
+const CAMERA_SENSITIVITY = {
+  alpha: 0.1,  // 10% of real rotation (compass/yaw)
+  beta: 0.1,   // 10% of real tilt (up/down)
+  gamma: 0.1   // 10% of real roll (sideways tilt)
+};
+
 // Main application variables
 let video, renderer, scene, camera, can;
 let alpha = 0,
