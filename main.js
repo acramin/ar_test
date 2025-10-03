@@ -284,39 +284,22 @@ function placeNewCan() {
   // Create new can
   can = createCan();
   
-  // Place can RELATIVE TO CURRENT CAMERA DIRECTION
-  // This ensures it always spawns in front of where user is looking
+  // Place can in FIXED WORLD COORDINATES (not relative to camera!)
+  // This prevents it from spinning/teleporting when camera rotates
   
-  // Get current camera direction
-  const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
+  // Random position in world space
+  const distance = 10 + Math.random() * 8; // 10-18 units away (further!)
+  const angle = Math.random() * Math.PI * 2; // Random direction 0-360°
+  const heightOffset = -1 + Math.random() * 3; // -1 to +2 meters height
   
-  // Random offset from center view
-  // Smaller angles = more centered, easier to find
-  const horizontalOffset = (Math.random() - 0.5) * 40; // -20 to +20 degrees
-  const verticalOffset = (Math.random() - 0.5) * 20;   // -10 to +10 degrees
+  // Calculate fixed world position using angle
+  can.position.set(
+    Math.sin(angle) * distance,  // X position (left/right)
+    heightOffset,                  // Y position (up/down)
+    Math.cos(angle) * distance   // Z position (forward/back)
+  );
   
-  // Distance: 8 to 15 meters (farther away)
-  const distance = 8 + Math.random() * 7;
-  
-  // Convert offsets to radians
-  const hOffsetRad = THREE.MathUtils.degToRad(horizontalOffset);
-  const vOffsetRad = THREE.MathUtils.degToRad(verticalOffset);
-  
-  // Calculate position in front of camera with offsets
-  const direction = cameraDirection.clone();
-  
-  // Apply horizontal rotation around Y axis
-  direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), hOffsetRad);
-  
-  // Apply vertical rotation around right axis
-  const rightVector = new THREE.Vector3();
-  rightVector.crossVectors(camera.up, direction).normalize();
-  direction.applyAxisAngle(rightVector, vOffsetRad);
-  
-  // Set final position
-  direction.multiplyScalar(distance);
-  can.position.copy(direction);
+  console.log(`📍 Can placed at fixed world position: (${can.position.x.toFixed(1)}, ${can.position.y.toFixed(1)}, ${can.position.z.toFixed(1)})`);
   
   console.log(`📍 Can placed at distance: ${distance.toFixed(1)}m, offsets: H=${horizontalOffset.toFixed(1)}° V=${verticalOffset.toFixed(1)}°`);
   console.log(`📍 World position: x=${can.position.x.toFixed(2)}, y=${can.position.y.toFixed(2)}, z=${can.position.z.toFixed(2)}`);
@@ -398,16 +381,14 @@ function updateCameraOrientation() {
   // This creates the AR effect by rotating the 3D world based on phone orientation
   const { alpha, beta, gamma } = deviceOrientation;
   
-  // Create rotation matrix from device orientation
-  // Screen orientation is portrait by default
-  const screenOrientation = window.orientation || 0;
-  const screenAngle = THREE.MathUtils.degToRad(screenOrientation);
+  // Clamp gamma to prevent wild spinning when phone tilts sideways
+  const clampedGamma = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, gamma));
   
   // Apply rotations in correct order for mobile AR
   camera.rotation.set(
-    beta - Math.PI / 2,  // Tilt correction
-    alpha,               // Compass
-    -gamma,              // Roll
+    beta - Math.PI / 2,  // Tilt correction for upright phone
+    alpha,               // Compass heading (left/right turn)
+    -clampedGamma,       // Roll (clamped to prevent spinning)
     'YXZ'
   );
 }
