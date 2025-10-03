@@ -119,8 +119,8 @@ function createCan() {
     createProceduralCan(group);
   }
   
-  // Add invisible collision sphere
-  const collisionGeo = new THREE.SphereGeometry(0.8, 16, 16);
+  // Add LARGER invisible collision sphere for easier tapping
+  const collisionGeo = new THREE.SphereGeometry(1.5, 16, 16); // Increased from 0.8 to 1.5
   const collisionMat = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0,
@@ -129,6 +129,9 @@ function createCan() {
   const collisionMesh = new THREE.Mesh(collisionGeo, collisionMat);
   collisionMesh.userData.clickable = true;
   group.add(collisionMesh);
+  
+  // Mark the entire group as clickable
+  group.userData.clickable = true;
   
   scene.add(group);
   return group;
@@ -281,15 +284,42 @@ function placeNewCan() {
   // Create new can
   can = createCan();
   
-  // Generate random position in spherical coordinates
-  // Azimuth: -60 to +60 degrees (in front of user)
-  // Elevation: -20 to +20 degrees (near eye level)
-  // Distance: 5 to 10 meters
-  canSpherical.azimuth = (Math.random() - 0.5) * 120;
-  canSpherical.elevation = (Math.random() - 0.5) * 40;
-  canSpherical.distance = 5 + Math.random() * 5;
+  // Place can RELATIVE TO CURRENT CAMERA DIRECTION
+  // This ensures it always spawns in front of where user is looking
   
-  console.log(`📍 Can placed at: azimuth=${canSpherical.azimuth.toFixed(1)}°, elevation=${canSpherical.elevation.toFixed(1)}°, distance=${canSpherical.distance.toFixed(1)}m`);
+  // Get current camera direction
+  const cameraDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraDirection);
+  
+  // Random offset from center view
+  // Smaller angles = more centered, easier to find
+  const horizontalOffset = (Math.random() - 0.5) * 40; // -20 to +20 degrees
+  const verticalOffset = (Math.random() - 0.5) * 20;   // -10 to +10 degrees
+  
+  // Distance: 8 to 15 meters (farther away)
+  const distance = 8 + Math.random() * 7;
+  
+  // Convert offsets to radians
+  const hOffsetRad = THREE.MathUtils.degToRad(horizontalOffset);
+  const vOffsetRad = THREE.MathUtils.degToRad(verticalOffset);
+  
+  // Calculate position in front of camera with offsets
+  const direction = cameraDirection.clone();
+  
+  // Apply horizontal rotation around Y axis
+  direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), hOffsetRad);
+  
+  // Apply vertical rotation around right axis
+  const rightVector = new THREE.Vector3();
+  rightVector.crossVectors(camera.up, direction).normalize();
+  direction.applyAxisAngle(rightVector, vOffsetRad);
+  
+  // Set final position
+  direction.multiplyScalar(distance);
+  can.position.copy(direction);
+  
+  console.log(`📍 Can placed at distance: ${distance.toFixed(1)}m, offsets: H=${horizontalOffset.toFixed(1)}° V=${verticalOffset.toFixed(1)}°`);
+  console.log(`📍 World position: x=${can.position.x.toFixed(2)}, y=${can.position.y.toFixed(2)}, z=${can.position.z.toFixed(2)}`);
 }
 
 function onCanTapped() {
@@ -391,25 +421,21 @@ function updateCanPosition() {
   can.visible = !foundCan;
   
   if (!foundCan) {
-    // Convert spherical coordinates to Cartesian
-    // Reference frame: phone pointing forward is 0° azimuth, 0° elevation
-    const azimuthRad = THREE.MathUtils.degToRad(canSpherical.azimuth);
-    const elevationRad = THREE.MathUtils.degToRad(canSpherical.elevation);
-    const dist = canSpherical.distance;
-    
-    // Calculate position relative to camera
-    const x = dist * Math.sin(azimuthRad) * Math.cos(elevationRad);
-    const y = dist * Math.sin(elevationRad);
-    const z = -dist * Math.cos(azimuthRad) * Math.cos(elevationRad);
-    
-    can.position.set(x, y, z);
-    
-    // Add gentle floating animation
+    // Can stays at its world position (set when placed)
+    // Just add gentle floating animation
     const time = Date.now() * 0.001;
-    can.position.y += Math.sin(time * 2) * 0.05;
+    const baseY = can.position.y;
+    
+    // Store original Y if not already stored
+    if (!can.userData.originalY) {
+      can.userData.originalY = baseY;
+    }
+    
+    // Float around original position
+    can.position.y = can.userData.originalY + Math.sin(time * 2) * 0.1;
     
     // Gentle rotation
-    can.rotation.y += 0.01;
+    can.rotation.y += 0.015;
   }
 }
 
@@ -456,10 +482,13 @@ function handleCanvasTap(event) {
   
   // Get tap position
   const rect = renderer.domElement.getBoundingClientRect();
-  const x = (event.clientX || event.changedTouches[0].clientX) - rect.left;
-  const y = (event.clientY || event.changedTouches[0].clientY) - rect.top;
+  const clientX = event.clientX || (event.changedTouches && event.changedTouches[0].clientX);
+  const clientY = event.clientY || (event.changedTouches && event.changedTouches[0].clientY);
   
-  // Convert to normalized device coordinates
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  
+  // Convert to normalized device coordinates (-1 to +1)
   const mouse = new THREE.Vector2(
     (x / rect.width) * 2 - 1,
     -(y / rect.height) * 2 + 1
@@ -469,13 +498,43 @@ function handleCanvasTap(event) {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, camera);
   
+  // Set a more generous threshold for raycasting
+  raycaster.params.Points.threshold = 0.5;
+  
+  // Get all intersections recursively
   const intersects = raycaster.intersectObjects(scene.children, true);
   
+  console.log(`🎯 Tap at screen pos: (${x.toFixed(0)}, ${y.toFixed(0)}), found ${intersects.length} intersections`);
+  
   // Check if can was hit
+  let canHit = false;
   for (let intersect of intersects) {
-    if (intersect.object.userData.clickable || intersect.object.parent === can) {
-      onCanTapped();
-      break;
+    // Check if this object or its parent is the can
+    let obj = intersect.object;
+    while (obj) {
+      if (obj === can || obj.userData.clickable) {
+        console.log("✅ CAN HIT!");
+        canHit = true;
+        break;
+      }
+      obj = obj.parent;
+    }
+    if (canHit) break;
+  }
+  
+  if (canHit) {
+    onCanTapped();
+  } else {
+    console.log("❌ Miss - no can hit");
+    
+    // Debug: Show where can is relative to camera
+    if (can) {
+      const canWorldPos = new THREE.Vector3();
+      can.getWorldPosition(canWorldPos);
+      
+      const distance = camera.position.distanceTo(canWorldPos);
+      console.log(`📏 Can distance from camera: ${distance.toFixed(2)}m`);
+      console.log(`📍 Can world position: x=${canWorldPos.x.toFixed(2)}, y=${canWorldPos.y.toFixed(2)}, z=${canWorldPos.z.toFixed(2)}`);
     }
   }
 }
