@@ -1,505 +1,637 @@
+// All JavaScript from <script> tag in index.html
+// GAME CONFIGURATION - Change this number to set how many cans need to be found
+const CANS_TO_FIND = 3; // Easy to change for testing different amounts!
 
-  // ====== CONFIG ======
-  const CANS_TO_FIND = 3;
+// Main application variables
+let video, renderer, scene, camera, can;
+let alpha = 0,
+  beta = 0,
+  gamma = 0;
+let canPosition = { x: 0, y: 0, z: -15 };
+let foundCan = false;
+let currentFacingMode = "environment";
+let foundCount = 0;
+let raycaster, mouse;
+let reticlePulseInterval;
+let gameStarted = false;
+let gameCompleted = false;
 
-  // ====== STATE ======
-  let videoEl = null;
-  let renderer, scene, camera, canGroup;
-  let raycaster, mouse;
-  let foundCount = 0;
-  let gameStarted = false;
-  let gameCompleted = false;
-  let currentFacingMode = "environment";
-  let deviceQuaternion = new THREE.Quaternion();
-  let useGLBPath = "./assets/redbull.glb"; // change if needed
-  let reticleEl = null;
-  let centerPlacementDistance = 6; // meters (virtual units) in front of camera to place can
-  let floatClock = 0;
-
-  // ====== INIT ENTRYPOINT ======
-  function init() {
-    // hooks to DOM (assumes these exist in your HTML)
-    videoEl = document.getElementById("camera-video");
-    reticleEl = document.getElementById("reticle");
-    document.getElementById("target-count").textContent = CANS_TO_FIND;
-    document.getElementById("final-count").textContent = CANS_TO_FIND;
-    document.getElementById("found-count").textContent = foundCount;
-
-    setupThree();
-    setupInput();
-    startCameraStream();
-    window.addEventListener("resize", onResize);
-    console.log("AR logic initialized");
+// Initialize the application
+function init() {
+  document.getElementById("target-count").textContent = CANS_TO_FIND;
+  document.getElementById("final-count").textContent = CANS_TO_FIND;
+  setupThreeJS();
+  setupDeviceOrientation();
+  const startButton = document.getElementById("start-game");
+  const playAgainButton = document.getElementById("play-again");
+  const restartGameButton = document.getElementById("restart-game");
+  const cameraSwitchButton = document.querySelector(".camera-switch");
+  if (startButton) {
+    console.log("Start game button found (using onclick)");
+  } else {
+    console.error("Start game button not found");
   }
-
-  // ====== THREE.JS SETUP ======
-  function setupThree() {
-    scene = new THREE.Scene();
-
-    // A perspective camera that will be rotated by device orientation events.
-    camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.01,
-      1000
-    );
-    camera.position.set(0, 0, 0);
-
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.domElement.style.position = "absolute";
-    renderer.domElement.style.top = "0px";
-    renderer.domElement.style.left = "0px";
-
-    // Put renderer into the same container your app uses
-    const container = document.getElementById("canvas-container") || document.body;
-    // clear previous canvas inside container (safety)
-    const existing = container.querySelector("canvas");
-    if (existing) existing.remove();
-    container.appendChild(renderer.domElement);
-
-    // lights
-    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-    dir.position.set(1, 2, 1);
-    scene.add(dir);
-
-    // simple grid/axes helper removed for production - uncomment if you need debug visuals
-    // scene.add(new THREE.AxesHelper(1.0));
-
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-
-    // create can placeholder immediately (will replace with GLB when loaded)
-    createCanFallback();
-
-    // start render loop
-    requestAnimationFrame(animate);
+  if (playAgainButton) {
+    playAgainButton.addEventListener("click", resetGame);
   }
-
-  // ====== LOAD OR CREATE CAN MODEL ======
-  function createCanFallback() {
-    if (canGroup) {
-      scene.remove(canGroup);
-      canGroup.traverse((c) => {
-        if (c.geometry) c.geometry.dispose();
-        if (c.material) {
-          if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
-          else c.material.dispose();
-        }
-      });
-    }
-
-    const g = new THREE.Group();
-
-    // procedural cylinder can
-    const bodyGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.9, 32);
-    const bodyMat = new THREE.MeshPhongMaterial({ color: 0xff0033 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    g.add(body);
-
-    // small top
-    const topGeo = new THREE.CircleGeometry(0.25, 32);
-    const topMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
-    const top = new THREE.Mesh(topGeo, topMat);
-    top.rotation.x = -Math.PI / 2;
-    top.position.y = 0.45;
-    g.add(top);
-
-    // collision sphere (invisible) used for raycast hit detection
-    const collisionGeo = new THREE.SphereGeometry(0.45, 12, 12);
-    const collisionMat = new THREE.MeshBasicMaterial({ visible: false });
-    const collisionMesh = new THREE.Mesh(collisionGeo, collisionMat);
-    collisionMesh.userData.isCanCollision = true;
-    collisionMesh.position.set(0, 0, 0);
-    g.add(collisionMesh);
-
-    // store
-    canGroup = g;
-    scene.add(canGroup);
-
-    // attempt to load GLB to replace it if GLTFLoader is available
-    tryLoadGLB();
+  if (restartGameButton) {
+    restartGameButton.addEventListener("click", restartCompleteGame);
   }
-
-  function tryLoadGLB() {
-    // Check for loader availability
-    if (THREE.GLTFLoader) {
-      const loader = new THREE.GLTFLoader();
-      loader.load(
-        useGLBPath,
-        (gltf) => {
-          // remove fallback pieces and add model instead
-          const model = gltf.scene || gltf.scenes[0];
-          model.traverse((c) => {
-            if (c.isMesh) {
-              c.castShadow = false;
-              c.receiveShadow = false;
-            }
-          });
-
-          // create group that includes an invisible collision mesh for raycast
-          const group = new THREE.Group();
-          // center model
-          model.position.set(0, -0.45, 0); // adjust if model pivot different
-          // scale to an approximate human scale
-          const scale = 0.03;
-          model.scale.set(scale, scale, scale);
-          group.add(model);
-
-          const collisionGeo = new THREE.SphereGeometry(0.5, 12, 12);
-          const collisionMat = new THREE.MeshBasicMaterial({ visible: false });
-          const collisionMesh = new THREE.Mesh(collisionGeo, collisionMat);
-          collisionMesh.userData.isCanCollision = true;
-          collisionMesh.position.set(0, 0, 0);
-          group.add(collisionMesh);
-
-          scene.remove(canGroup);
-          canGroup = group;
-          scene.add(canGroup);
-
-          console.log("GLB loaded and placed into scene");
-        },
-        (xhr) => {
-          // progress (optional)
-          if (xhr && xhr.loaded && xhr.total) {
-            const pct = Math.round((xhr.loaded / xhr.total) * 100);
-            // console.log("GLB loading: " + pct + "%");
-          }
-        },
-        (err) => {
-          console.warn("Failed loading GLB, using fallback can. Error:", err);
-        }
-      );
-    } else {
-      console.warn("THREE.GLTFLoader not available - using procedural can fallback");
-    }
+  if (cameraSwitchButton) {
+    cameraSwitchButton.addEventListener("click", switchCamera);
   }
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+  renderer.domElement.addEventListener("click", onCanvasTap, false);
+  renderer.domElement.addEventListener("touchstart", onCanvasTap, {
+    passive: false,
+  });
+  randomizeCanPosition();
+  animate();
+  startReticlePulse();
+  startCamera();
+}
 
-  // ====== CAMERA / DEVICE ORIENTATION ======
-  // Convert DeviceOrientationEvent alpha/beta/gamma into a THREE quaternion.
-  function handleDeviceOrientationEvent(ev) {
-    // Some browsers provide null values initially - guard those
-    const alpha = ev.alpha ? THREE.MathUtils.degToRad(ev.alpha) : 0; // Z
-    const beta = ev.beta ? THREE.MathUtils.degToRad(ev.beta) : 0; // X'
-    const gamma = ev.gamma ? THREE.MathUtils.degToRad(ev.gamma) : 0; // Y''
-    // NOTE: The mapping / order is tricky across devices. 'YXZ' often works well.
-    const euler = new THREE.Euler(beta, alpha, -gamma, "YXZ");
-    deviceQuaternion.setFromEuler(euler);
+function startGame() {
+  console.log("startGame function called!");
+  gameStarted = true;
 
-    // Optional: adjust to align with CSS camera mirroring / phone orientation if needed
-    // Some devices require a fix: rotate around X by -90deg
-    const screenTransform = new THREE.Quaternion();
-    // If the phone is held in portrait natural orientation, this is often not necessary.
-    // If you observe a 90deg offset, uncomment and adjust the rotation below:
-    // screenTransform.setFromEuler(new THREE.Euler(-Math.PI/2, 0, 0));
-    deviceQuaternion.multiply(screenTransform);
+  randomizeCanPosition();
+
+  const welcomeScreen = document.getElementById("welcome-screen");
+  if (welcomeScreen) {
+    welcomeScreen.classList.add("hidden");
+    welcomeScreen.style.display = "none";
+    welcomeScreen.style.visibility = "hidden";
+    console.log("Welcome screen hidden");
+  } else {
+    console.error("Welcome screen not found");
   }
-
-  // Attach device orientation listener
-  function enableDeviceOrientation() {
-    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
-      // iOS 13+ permission flow
-      DeviceOrientationEvent.requestPermission().then((perm) => {
-        if (perm === "granted") {
-          window.addEventListener("deviceorientation", handleDeviceOrientationEvent);
-        } else {
-          console.warn("DeviceOrientation permission denied");
-        }
-      }).catch((err) => {
-        console.warn("DeviceOrientation permission error:", err);
-      });
-    } else if (window.DeviceOrientationEvent) {
-      window.addEventListener("deviceorientation", handleDeviceOrientationEvent);
-    } else {
-      console.warn("DeviceOrientationEvent not supported in this browser");
-    }
+  const uiOverlay = document.getElementById("ui-overlay");
+  const reticle = document.getElementById("reticle");
+  const cameraSwitch = document.querySelector(".camera-switch");
+  if (uiOverlay) {
+    uiOverlay.style.display = "flex";
+    uiOverlay.style.visibility = "visible";
+    console.log("UI overlay shown");
   }
+  if (reticle) {
+    reticle.style.display = "block";
+    reticle.style.visibility = "visible";
+    console.log("Reticle shown");
+  }
+  if (cameraSwitch) {
+    cameraSwitch.style.display = "flex";
+    cameraSwitch.style.visibility = "visible";
+    console.log("Camera switch shown");
+  }
+}
 
-  // ====== CAMERA STREAM (video) ======
-  function startCameraStream() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const loading = document.getElementById("loading");
-      if (loading) loading.innerText = "Camera not supported in this browser.";
-      return;
-    }
+// function setupThreeJS() {
+//   scene = new THREE.Scene();
+//   camera = new THREE.PerspectiveCamera(
+//     70,
+//     window.innerWidth / window.innerHeight,
+//     0.1,
+//     1000
+//   );
+//   camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
+  
+//   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+//   renderer.setSize(window.innerWidth, window.innerHeight);
+//   renderer.setPixelRatio(window.devicePixelRatio);
+//   document.getElementById("canvas-container").appendChild(renderer.domElement);
+//   createCan();
+//   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+//   scene.add(ambientLight);
+//   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+//   directionalLight.position.set(1, 1, 1);
+//   scene.add(directionalLight);
+//   const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+//   directionalLight2.position.set(-1, -1, -1);
+//   scene.add(directionalLight2);
+// }
 
-    const constraints = {
-      audio: false,
-      video: {
-        facingMode: currentFacingMode,
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+function setupThreeJS() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+  );
+  camera.position.set(0, 1.6, 5);
+  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.getElementById("canvas-container").appendChild(renderer.domElement);
+  
+  // ADD COORDINATE SYSTEM HELPERS
+  addCoordinateHelpers();
+  
+  createCan();
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(1, 1, 1);
+  scene.add(directionalLight);
+  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  directionalLight2.position.set(-1, -1, -1);
+  scene.add(directionalLight2);
+}
+
+function addCoordinateHelpers() {
+  // 1. MUCH BIGGER AXES HELPER - Shows X (red), Y (green), Z (blue) axes
+  const axesHelper = new THREE.AxesHelper(10); // Much bigger - 10 units long
+  axesHelper.position.set(0, 0, 0); // At world origin
+  scene.add(axesHelper);
+  
+  // 2. GRID HELPER - Shows ground plane (bigger and brighter)
+  const gridHelper = new THREE.GridHelper(40, 40, 0x00ff00, 0x808080);
+  gridHelper.position.y = 0; // At ground level
+  scene.add(gridHelper);
+  
+  // 3. LARGE CAMERA POSITION MARKER
+  const cameraMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+  const cameraMarkerMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xffff00,
+    wireframe: false
+  });
+  const cameraMarker = new THREE.Mesh(cameraMarkerGeometry, cameraMarkerMaterial);
+  cameraMarker.position.copy(camera.position);
+  scene.add(cameraMarker);
+  
+  // 4. LARGE REFERENCE SPHERES at key positions
+  // Big sphere at origin (world center)
+  const originSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false })
+  );
+  originSphere.position.set(0, 0, 0);
+  scene.add(originSphere);
+  
+  // Big sphere directly in front of camera (should be very visible)
+  const frontSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false })
+  );
+  frontSphere.position.set(0, 1.6, 0); // In front at eye level
+  scene.add(frontSphere);
+  
+  // Sphere to the right
+  const rightSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: false })
+  );
+  rightSphere.position.set(5, 1.6, 0);
+  scene.add(rightSphere);
+  
+  // Sphere to the left
+  const leftSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: false })
+  );
+  leftSphere.position.set(-5, 1.6, 0);
+  scene.add(leftSphere);
+  
+  // 5. DIRECTION ARROW from camera (bigger and longer)
+  const arrowHelper = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 0, -1), // Direction (forward)
+    camera.position,              // Origin (camera position)
+    5,                            // Longer - 5 units
+    0x00ffff,                     // Cyan color
+    1,                            // Head length
+    0.5                           // Head width
+  );
+  scene.add(arrowHelper);
+  
+  // 6. Add bright boxes at cardinal positions for easy visibility
+  const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+  
+  // Box in front (Z negative)
+  const frontBox = new THREE.Mesh(
+    boxGeometry,
+    new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+  );
+  frontBox.position.set(0, 1.6, -3);
+  scene.add(frontBox);
+  
+  console.log("📐 Enhanced coordinate helpers added:");
+  console.log("  - LARGE red axis = X (left/right)");
+  console.log("  - LARGE green axis = Y (up/down)");
+  console.log("  - LARGE blue axis = Z (forward/back)");
+  console.log("  - Grid = Ground plane (Y=0)");
+  console.log("  - YELLOW sphere = Camera position (0, 1.6, 5)");
+  console.log("  - RED sphere = World origin (0, 0, 0)");
+  console.log("  - GREEN sphere = Front at eye level (0, 1.6, 0)");
+  console.log("  - BLUE sphere = Right side (5, 1.6, 0)");
+  console.log("  - MAGENTA sphere = Left side (-5, 1.6, 0)");
+  console.log("  - CYAN arrow = Camera forward direction");
+  console.log("  - WHITE wireframe box = 3 units in front");
+  console.log("");
+  console.log("💡 If you don't see anything, try:");
+  console.log("   1. Turn your phone around slowly");
+  console.log("   2. Tilt phone up/down");
+  console.log("   3. The green sphere should be right in front of you!");
+}
+
+function createCan() {
+  console.log("Creating can model...");
+  
+  const group = new THREE.Group();
+  
+  // Check if GLTFLoader is available
+  if (typeof THREE.GLTFLoader !== 'undefined') {
+    console.log("GLTFLoader available: true");
+    const gltfloader = new THREE.GLTFLoader();
+    
+    console.log("Loading 3D model from: ./assets/redbull.glb");
+    
+    gltfloader.load(
+      "./assets/redbull.glb", 
+      function (gltf) {
+        console.log("✅ GLB model loaded successfully!");
+        console.log("Model data:", gltf);
+        
+        // Get the scene from the loaded model
+        const model = gltf.scene;
+        model.rotation.x = Math.PI / 2; // 90 degrees
+        model.rotation.y = 0;
+        model.rotation.z = 0;
+        // Scale the model appropriately (adjust size as needed)
+        model.scale.set(0.05, 0.05, 0.05);
+        
+        // Add the model to the group
+        group.add(model);
+        
+        console.log("✅ Custom GLB model setup complete!");
       },
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then((stream) => {
-        if (!videoEl) videoEl = document.getElementById("camera-video");
-        if (!videoEl) {
-          console.warn("No <video id='camera-video'> found. Still continuing without direct camera preview element.");
-        } else {
-          videoEl.srcObject = stream;
-          videoEl.setAttribute("playsinline", ""); // iOS
-          videoEl.play().catch(() => {});
-        }
-
-        // show UI if welcome not started
-        const loading = document.getElementById("loading");
-        if (loading) loading.style.display = "none";
-
-        enableDeviceOrientation();
-      })
-      .catch((err) => {
-        console.error("getUserMedia error:", err);
-        const loading = document.getElementById("loading");
-        if (loading) {
-          loading.innerHTML = `
-            <div class="loader"></div>
-            <p>Erro ao acessar a câmera</p>
-            <button onclick="(function(){ startCameraStream(); })()" class="permission-btn">Tentar Novamente</button>
-            <p style="margin-top:20px;font-size:14px;opacity:0.7">Verifique se permitiu o acesso à câmera</p>
-          `;
-        }
-      });
-  }
-
-  function switchCamera() {
-    // stop existing tracks
-    if (videoEl && videoEl.srcObject) {
-      videoEl.srcObject.getTracks().forEach(t => t.stop());
-    } else {
-      // try to stop from any attached stream
-      const streams = [];
-      try {
-        const s = videoEl.srcObject;
-        if (s) streams.push(s);
-      } catch (e) {}
-    }
-    currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
-    startCameraStream();
-  }
-
-  // ====== INPUT / RAYCAST HANDLING ======
-  function setupInput() {
-    // Dom elements (may not exist if user customized)
-    const startButton = document.getElementById("start-game");
-    const playAgainButton = document.getElementById("play-again");
-    const restartGameButton = document.getElementById("restart-game");
-    const cameraSwitchButton = document.querySelector(".camera-switch");
-
-    if (startButton) {
-      startButton.addEventListener("click", () => {
-        startGame();
-      });
-    }
-
-    if (playAgainButton) playAgainButton.addEventListener("click", resetFind);
-    if (restartGameButton) restartGameButton.addEventListener("click", restartAll);
-    if (cameraSwitchButton) cameraSwitchButton.addEventListener("click", switchCamera);
-
-    // pointer handlers on the renderer canvas
-    renderer.domElement.addEventListener("click", onPointerEvent, false);
-    renderer.domElement.addEventListener("touchstart", onPointerEvent, { passive: false });
-  }
-
-  function onPointerEvent(ev) {
-    // prevent double handling for touch
-    if (ev.type === "touchstart") ev.preventDefault();
-
-    // compute normalized device coordinates for the pointer
-    const rect = renderer.domElement.getBoundingClientRect();
-    let clientX, clientY;
-    if (ev.touches && ev.touches.length) {
-      clientX = ev.touches[0].clientX;
-      clientY = ev.touches[0].clientY;
-    } else {
-      clientX = ev.clientX;
-      clientY = ev.clientY;
-    }
-    mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-
-    // run raycast
-    raycaster.setFromCamera(mouse, camera);
-    const hits = raycaster.intersectObjects(scene.children, true);
-    // look for an object with userData.isCanCollision true
-    const hit = hits.find(h => h.object && h.object.userData && h.object.userData.isCanCollision);
-    if (hit) {
-      onCanHit();
-    } else {
-      // optionally allow "center tap" snap if user tapped near center reticle
-      if (Math.abs(mouse.x) < 0.12 && Math.abs(mouse.y) < 0.12) {
-        // if tap at center, try to place or hit using center ray
-        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-        const hits2 = raycaster.intersectObjects(scene.children, true);
-        const hit2 = hits2.find(h => h.object && h.object.userData && h.object.userData.isCanCollision);
-        if (hit2) onCanHit();
+      function (progress) {
+        // Loading progress
+        const percent = (progress.loaded / progress.total * 100).toFixed(0);
+        console.log(`Model loading progress: ${percent}%`);
+      },
+      function (error) {
+        console.log("❌ Failed to load GLB model:", error);
+        console.log("🔄 Falling back to procedural Red Bull can...");
+        createProceduralCan(group);
       }
+    );
+  } else {
+    console.log("GLTFLoader available: false");
+    console.log("🔄 Using procedural Red Bull can...");
+    createProceduralCan(group);
+  }
+  
+  // Add collision detection sphere (works for both models)
+  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const collisionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    visible: false,
+  });
+  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  collisionMesh.userData.isCanCollision = true;
+  group.add(collisionMesh);
+  
+  // Set up group properties
+  group.userData = { floatTime: Math.random() * 100 };
+  scene.add(group);
+  
+  // Set initial reference
+  can = group;
+  can.position.set(canPosition.x, canPosition.y, canPosition.z);
+}
+
+
+
+function createCan2() {
+  const group = new THREE.Group();
+  const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 32);
+  const material = new THREE.MeshPhongMaterial({
+    color: 0xff0000,
+    shininess: 100,
+    specular: 0xffffff,
+  });
+  const body = new THREE.Mesh(geometry, material);
+  group.add(body);
+  const topGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32);
+  const topMaterial = new THREE.MeshPhongMaterial({
+    color: 0xeeeeee,
+    shininess: 150,
+    specular: 0xffffff,
+  });
+  const top = new THREE.Mesh(topGeometry, topMaterial);
+  top.position.y = 0.625;
+  group.add(top);
+  const rimGeometry = new THREE.TorusGeometry(0.45, 0.02, 16, 32);
+  const rimMaterial = new THREE.MeshPhongMaterial({
+    color: 0xffffff,
+    shininess: 200,
+    specular: 0xffffff,
+  });
+  const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+  rim.position.y = 0.625;
+  rim.rotation.x = Math.PI / 2;
+  group.add(rim);
+  const labelGeometry = new THREE.CylinderGeometry(0.51, 0.51, 0.4, 32);
+  const labelMaterial = new THREE.MeshPhongMaterial({
+    color: 0xff9900,
+    shininess: 80,
+    specular: 0xffddaa,
+  });
+  const label = new THREE.Mesh(labelGeometry, labelMaterial);
+  label.position.y = 0.2;
+  group.add(label);
+  const logoGeometry = new THREE.CylinderGeometry(0.52, 0.52, 0.3, 32);
+  const logoMaterial = new THREE.MeshPhongMaterial({
+    color: 0x003366,
+    shininess: 90,
+    specular: 0x6699cc,
+  });
+  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  logo.position.y = -0.1;
+  group.add(logo);
+  const collisionGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+  const collisionMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    visible: false,
+  });
+  const collisionMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  collisionMesh.userData.isCanCollision = true;
+  group.add(collisionMesh);
+  group.userData = { floatTime: Math.random() * 100 };
+  scene.add(group);
+  can = group;
+  can.position.set(canPosition.x, canPosition.y, canPosition.z);
+}
+
+function setupDeviceOrientation() {
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener("deviceorientation", (event) => {
+      alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+    });
+  } else {
+    alert(
+      "Device orientation not supported on this device. The experience will be limited."
+    );
+  }
+}
+
+function startCamera() {
+  video = document.getElementById("camera-video");
+  const constraints = {
+    video: {
+      facingMode: currentFacingMode,
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+  };
+  navigator.mediaDevices
+    .getUserMedia(constraints)
+    .then((stream) => {
+      video.srcObject = stream;
+      video.play();
+      // Set initial camera transform based on facing mode
+      video.style.transform = currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(-1)";
+      document.getElementById("loading").style.display = "none";
+      if (!gameStarted) {
+        document.getElementById("welcome-screen").style.display = "flex";
+        document.getElementById("ui-overlay").style.display = "none";
+        document.getElementById("reticle").style.display = "none";
+        document.querySelector(".camera-switch").style.display = "none";
+      }
+    })
+    .catch((error) => {
+      console.error("Camera error:", error);
+      document.getElementById("loading").innerHTML = `
+                <div class="loader"></div>
+                <p>Erro ao acessar a câmera</p>
+                <button onclick="startCamera()" class="permission-btn">Tentar Novamente</button>
+                <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
+                    Verifique se você permitiu o acesso à câmera
+                </p>
+            `;
+      if (currentFacingMode === "environment") {
+        currentFacingMode = "user";
+        video.style.transform = "scaleX(1)";
+        setTimeout(() => startCamera(), 1000);
+      }
+    });
+}
+
+function switchCamera() {
+  currentFacingMode =
+    currentFacingMode === "environment" ? "user" : "environment";
+  video.style.transform =
+    currentFacingMode === "environment" ? "scaleX(1)" : "scaleX(1)";
+  if (video.srcObject) {
+    const tracks = video.srcObject.getTracks();
+    tracks.forEach((track) => track.stop());
+  }
+  startCamera();
+}
+
+function onCanvasTap(event) {
+  if (!gameStarted || foundCan || gameCompleted) return;
+  if (event.type === "touchstart") {
+    event.preventDefault();
+  }
+  const rect = renderer.domElement.getBoundingClientRect();
+  if (event.type === "touchstart") {
+    mouse.x = ((event.touches[0].clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.touches[0].clientY - rect.top) / rect.height) * 2 + 1;
+  } else {
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  console.log("Tap detected. Intersections found:", intersects.length);
+  let hitCan = false;
+  for (let i = 0; i < intersects.length; i++) {
+    console.log("Intersection", i, ":", intersects[i].object);
+    if (intersects[i].object.parent === can || intersects[i].object === can) {
+      hitCan = true;
+      console.log("HIT CAN!");
+      break;
     }
   }
-
-  function onCanHit() {
-    if (!gameStarted || gameCompleted) return;
+  if (hitCan) {
+    foundCan = true;
     foundCount++;
     document.getElementById("found-count").textContent = foundCount;
-    animateHitEffect();
-    // brief scale animation
-    if (canGroup) {
-      canGroup.scale.setScalar(1.2);
-      setTimeout(() => { if (canGroup) canGroup.scale.setScalar(1.0); }, 220);
-    }
+    console.log("Can found! Total found:", foundCount + "/" + CANS_TO_FIND);
+    showHitEffect();
+    can.scale.set(1.2, 1.2, 1.2);
+    setTimeout(() => {
+      if (can) can.scale.set(1, 1, 1);
+    }, 200);
     if (foundCount >= CANS_TO_FIND) {
       gameCompleted = true;
+      console.log("GAME COMPLETED! All", CANS_TO_FIND, "cans found!");
       setTimeout(() => {
-        const popup = document.getElementById("game-complete-popup");
-        if (popup) popup.classList.add("visible");
-      }, 700);
+        document.getElementById("game-complete-popup").classList.add("visible");
+      }, 1000);
     } else {
-      // show small congrats popup
       const remaining = CANS_TO_FIND - foundCount;
-      const congratsTitle = document.getElementById("congrats-title");
-      const congratsText = document.getElementById("congrats-text");
-      if (congratsTitle) congratsTitle.textContent = `Ótimo! 🎉`;
-      if (congratsText) congratsText.textContent = `Você encontrou ${foundCount}/${CANS_TO_FIND} latas! Faltam ${remaining}.`;
+      document.getElementById("congrats-title").textContent = `Ótimo! 🎉`;
+      document.getElementById(
+        "congrats-text"
+      ).textContent = `Você encontrou ${foundCount}/${CANS_TO_FIND} latas! Faltam apenas ${remaining}!`;
       setTimeout(() => {
-        const cp = document.getElementById("congrats-popup");
-        if (cp) cp.classList.add("visible");
-      }, 600);
+        document.getElementById("congrats-popup").classList.add("visible");
+      }, 800);
     }
+  } else {
+    console.log("No can hit this time");
+  }
+}
 
-    // place next can (or hide if finished)
-    if (!gameCompleted) {
-      placeCanInFrontOfCameraRandomized();
+function showHitEffect() {
+  const effect = document.createElement("div");
+  effect.className = "hit-effect";
+  document.body.appendChild(effect);
+  effect.style.animation = "hitAnimation 0.8s forwards";
+  setTimeout(() => {
+    document.body.removeChild(effect);
+  }, 800);
+}
+
+function startReticlePulse() {
+  const reticle = document.getElementById("reticle");
+  let scale = 1;
+  let growing = true;
+  reticlePulseInterval = setInterval(() => {
+    if (growing) {
+      scale += 0.01;
+      if (scale >= 1.1) growing = false;
     } else {
-      // allow final pause
-      // hide the can or leave as-is for effect
+      scale -= 0.01;
+      if (scale <= 0.9) growing = true;
     }
+    reticle.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }, 50);
+}
+
+// function randomizeCanPosition() {
+//   const angle = Math.random() * Math.PI * 2;
+//   const distance = 12 + Math.random() * 5;
+//   canPosition.x = Math.cos(angle) * distance;
+//   canPosition.y = 1.5 + Math.random() * 2;
+//   canPosition.z = Math.sin(angle) * distance;
+//   if (can) {
+//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
+//   }
+// }
+
+function randomizeCanPosition() {
+  // const distance = 30 + Math.random() * 2; // 20-22 units away
+  // const sideOffset = (Math.random() - 0.5) * 10; // -4.5 to +4.5 to the side
+  // const heightOffset = 5 + (Math.random() * 2); // 5 to +7 above eye level
+
+  const distance = 10; // 20-22 units away
+  const sideOffset = 10; // -4.5 to +4.5 to the side
+  const heightOffset = 30; // 5 to +7 above eye level
+  
+  // Position relative to camera but ensure it's always in front and at good height
+  canPosition.x = 10;
+  canPosition.y = 10; // Camera is now at 1.6, so this puts can at 1.6-2.6
+  canPosition.z = 10; // Always in front (negative Z from camera)
+  
+  console.log(`Can positioned at: x=${canPosition.x.toFixed(1)}, y=${canPosition.y.toFixed(1)}, z=${canPosition.z.toFixed(1)}`);
+  console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
+  
+  if (can) {
+    can.position.set(canPosition.x, canPosition.y, canPosition.z);
   }
+}
 
-  function animateHitEffect() {
-    const el = document.createElement("div");
-    el.className = "hit-effect";
-    document.body.appendChild(el);
-    el.style.animation = "hitAnimation 0.8s forwards";
-    setTimeout(() => {
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    }, 900);
+
+function resetGame() {
+  foundCan = false;
+  document.getElementById("congrats-popup").classList.remove("visible");
+  randomizeCanPosition();
+}
+
+function restartCompleteGame() {
+  foundCan = false;
+  foundCount = 0;
+  gameCompleted = false;
+  document.getElementById("found-count").textContent = "0";
+  document.getElementById("game-complete-popup").classList.remove("visible");
+  randomizeCanPosition();
+  console.log("Game restarted - looking for", CANS_TO_FIND, "cans again!");
+}
+
+
+
+// function animate() {
+//   requestAnimationFrame(animate);
+//   if (camera) {
+//     camera.rotation.set(beta, alpha, gamma, "YXZ");
+//   }
+//   if (can && !foundCan && gameStarted && !gameCompleted) {
+//     // NO ANIMATION - can stays perfectly still at its original position
+//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
+//     can.visible = true;
+    
+//     // Debug: Log can position relative to camera
+//     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+//     console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
+//   } else if (can && (!gameStarted || gameCompleted)) {
+//     can.visible = false;
+//   }
+//   if (renderer && scene && camera) {
+//     renderer.render(scene, camera);
+//   }
+// }
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (camera) {
+    // Fix: Adjust beta to compensate for holding phone upright
+    // When phone is upright, beta ≈ 0, but we want camera to look forward
+    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
+    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
   }
-
-  // ====== GAME CONTROL ======
-  function startGame() {
-    gameStarted = true;
-    gameCompleted = false;
-    foundCount = 0;
-    document.getElementById("found-count").textContent = foundCount;
-    // UI toggles (safe-check for elements)
-    const welcome = document.getElementById("welcome-screen");
-    if (welcome) { welcome.classList.add("hidden"); welcome.style.display = "none"; }
-    const uiOverlay = document.getElementById("ui-overlay");
-    if (uiOverlay) { uiOverlay.style.display = "flex"; uiOverlay.style.visibility = "visible"; }
-    const ret = document.getElementById("reticle");
-    if (ret) { ret.style.display = "block"; ret.style.visibility = "visible"; }
-    const cameraSwitch = document.querySelector(".camera-switch");
-    if (cameraSwitch) { cameraSwitch.style.display = "flex"; cameraSwitch.style.visibility = "visible"; }
-
-    // Place first can in front of camera
-    placeCanInFrontOfCameraRandomized();
-    console.log("Game started");
+  if (can && !foundCan && gameStarted && !gameCompleted) {
+    // NO ANIMATION - can stays perfectly still at its original position
+    can.position.set(canPosition.x, canPosition.y, canPosition.z);
+    can.visible = true;
+    
+    // Debug: Log can position relative to camera
+    console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
+    console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
+  } else if (can && (!gameStarted || gameCompleted)) {
+    can.visible = false;
   }
-
-  function resetFind() {
-    // hide congrats popup and reposition the same can
-    const cp = document.getElementById("congrats-popup");
-    if (cp) cp.classList.remove("visible");
-    placeCanInFrontOfCameraRandomized();
-  }
-
-  function restartAll() {
-    foundCount = 0;
-    gameCompleted = false;
-    gameStarted = false;
-    document.getElementById("found-count").textContent = "0";
-    const popup = document.getElementById("game-complete-popup");
-    if (popup) popup.classList.remove("visible");
-    // re-show welcome
-    const welcome = document.getElementById("welcome-screen");
-    if (welcome) { welcome.classList.remove("hidden"); welcome.style.display = "flex"; }
-    console.log("Game restarted to initial state");
-  }
-
-  // Place can directly in front of camera with a small randomized offset
-  function placeCanInFrontOfCameraRandomized() {
-    if (!canGroup) return;
-    // compute forward vector in world space
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(deviceQuaternion);
-    // world position is camera position (0,0,0) + forward * distance
-    const base = forward.clone().multiplyScalar(centerPlacementDistance);
-
-    // add small random lateral & vertical offsets in camera local space
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(deviceQuaternion);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(deviceQuaternion);
-
-    const lateral = (Math.random() - 0.5) * 1.2; // +/- 0.6 units
-    const vertical = (Math.random() - 0.5) * 0.8; // +/- 0.4 units
-    const depthJitter = (Math.random() - 0.2) * 1.5; // small depth jitter
-
-    const pos = new THREE.Vector3().copy(base)
-      .add(right.multiplyScalar(lateral))
-      .add(up.multiplyScalar(vertical))
-      .add(forward.clone().multiplyScalar(depthJitter));
-
-    canGroup.position.copy(pos);
-    // ensure can faces camera: rotate to look at camera origin
-    canGroup.lookAt(new THREE.Vector3(0, 0, 0));
-    // adjust uprightness if model pivot odd
-    canGroup.rotation.z = 0;
-    canGroup.rotation.x = 0;
-
-    // also ensure collision mesh is at group center (already in our models)
-    canGroup.visible = gameStarted && !gameCompleted;
-    console.log("Can placed at", pos.toArray().map(n => n.toFixed(2)).join(", "));
-  }
-
-  // ====== RENDER LOOP ======
-  function animate(t) {
-    requestAnimationFrame(animate);
-
-    // smooth floating
-    floatClock += 0.01;
-    if (canGroup && canGroup.visible && gameStarted && !gameCompleted) {
-      canGroup.position.y += Math.sin(floatClock) * 0.0005; // tiny float
-      canGroup.rotation.y += 0.003;
-    }
-
-    // update camera orientation from latest device quaternion
-    // We want the "virtual camera" to use deviceQuaternion, which represents the phone orientation in world space.
-    // Since our camera sits at (0,0,0), we apply deviceQuaternion to camera.quaternion.
-    camera.quaternion.copy(deviceQuaternion);
-
-    // If camera needs to be mirrored for 'user' facing mode, we can flip the renderer or video via CSS instead.
-    // Raycaster uses the camera quaternion and projection correctly.
-
-    // Render
+  if (renderer && scene && camera) {
     renderer.render(scene, camera);
   }
+}
 
-  // ====== WINDOW EVENTS ======
-  function onResize() {
-    if (!camera || !renderer) return;
+window.addEventListener("resize", () => {
+  if (camera) {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+  }
+  if (renderer) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
+});
 
-  // ====== EXTERNAL ENTRY (keep name used by your HTML button) ======
-  window.startGameFromButton = function () {
-    if (!gameStarted) startGame();
-  };
+window.addEventListener("load", init);
 
-  // Expose switchCamera for your existing button if it calls global switchCamera
-  window.switchCamera = switchCamera;
+function testButton() {
+  console.log("Test button clicked!");
+  alert("Button is working!");
+}
 
-  // initialize on page load
-  window.addEventListener("load", init);
+window.startGameFromButton = function () {
+  console.log("Starting game from button click");
+  startGame();
+};
