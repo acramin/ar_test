@@ -21,6 +21,9 @@ let raycaster, mouse;
 let reticlePulseInterval;
 let gameStarted = false;
 let gameCompleted = false;
+let lastAlpha = 0;
+let cumulativeAlpha = 0;
+let alphaInitialized = false;
 
 // Initialize the application
 function init() {
@@ -376,9 +379,31 @@ function createCan2() {
 function setupDeviceOrientation() {
   if (window.DeviceOrientationEvent) {
     window.addEventListener("deviceorientation", (event) => {
-      alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      const rawAlpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
       beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
       gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+      
+      // Handle alpha wrapping (0° to 360° issue)
+      if (!alphaInitialized) {
+        lastAlpha = rawAlpha;
+        cumulativeAlpha = rawAlpha;
+        alphaInitialized = true;
+      } else {
+        // Calculate the difference
+        let diff = rawAlpha - lastAlpha;
+        
+        // Handle wrap-around at 0°/360°
+        if (diff > Math.PI) {
+          diff -= 2 * Math.PI; // Wrapped from 360° to 0°
+        } else if (diff < -Math.PI) {
+          diff += 2 * Math.PI; // Wrapped from 0° to 360°
+        }
+        
+        cumulativeAlpha += diff;
+        lastAlpha = rawAlpha;
+      }
+      
+      alpha = cumulativeAlpha;
     });
   } else {
     alert(
