@@ -141,58 +141,98 @@ function setupThreeJS() {
 }
 
 function addCoordinateHelpers() {
-  // 1. AXES HELPER - Shows X (red), Y (green), Z (blue) axes
-  const axesHelper = new THREE.AxesHelper(5); // 5 units long
+  // 1. MUCH BIGGER AXES HELPER - Shows X (red), Y (green), Z (blue) axes
+  const axesHelper = new THREE.AxesHelper(10); // Much bigger - 10 units long
   axesHelper.position.set(0, 0, 0); // At world origin
   scene.add(axesHelper);
   
-  // 2. GRID HELPER - Shows ground plane
-  const gridHelper = new THREE.GridHelper(20, 20, 0x00ff00, 0x404040);
+  // 2. GRID HELPER - Shows ground plane (bigger and brighter)
+  const gridHelper = new THREE.GridHelper(40, 40, 0x00ff00, 0x808080);
   gridHelper.position.y = 0; // At ground level
   scene.add(gridHelper);
   
-  // 3. CAMERA POSITION MARKER - Shows where camera is
-  const cameraMarkerGeometry = new THREE.SphereGeometry(0.2, 16, 16);
-  const cameraMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  // 3. LARGE CAMERA POSITION MARKER
+  const cameraMarkerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+  const cameraMarkerMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xffff00,
+    wireframe: false
+  });
   const cameraMarker = new THREE.Mesh(cameraMarkerGeometry, cameraMarkerMaterial);
   cameraMarker.position.copy(camera.position);
   scene.add(cameraMarker);
   
-  // 4. REFERENCE SPHERES at key positions
-  // Sphere at origin
+  // 4. LARGE REFERENCE SPHERES at key positions
+  // Big sphere at origin (world center)
   const originSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.3, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+    new THREE.SphereGeometry(1, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false })
   );
   originSphere.position.set(0, 0, 0);
   scene.add(originSphere);
   
-  // Sphere in front of camera
+  // Big sphere directly in front of camera (should be very visible)
   const frontSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.3, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
+    new THREE.SphereGeometry(1, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false })
   );
   frontSphere.position.set(0, 1.6, 0); // In front at eye level
   scene.add(frontSphere);
   
-  // 5. DIRECTION ARROWS from camera
+  // Sphere to the right
+  const rightSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: false })
+  );
+  rightSphere.position.set(5, 1.6, 0);
+  scene.add(rightSphere);
+  
+  // Sphere to the left
+  const leftSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: false })
+  );
+  leftSphere.position.set(-5, 1.6, 0);
+  scene.add(leftSphere);
+  
+  // 5. DIRECTION ARROW from camera (bigger and longer)
   const arrowHelper = new THREE.ArrowHelper(
     new THREE.Vector3(0, 0, -1), // Direction (forward)
     camera.position,              // Origin (camera position)
-    3,                            // Length
-    0x0000ff                      // Color (blue)
+    5,                            // Longer - 5 units
+    0x00ffff,                     // Cyan color
+    1,                            // Head length
+    0.5                           // Head width
   );
   scene.add(arrowHelper);
   
-  console.log("📐 Coordinate helpers added:");
-  console.log("  - Red axis = X (left/right)");
-  console.log("  - Green axis = Y (up/down)");
-  console.log("  - Blue axis = Z (forward/back)");
+  // 6. Add bright boxes at cardinal positions for easy visibility
+  const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+  
+  // Box in front (Z negative)
+  const frontBox = new THREE.Mesh(
+    boxGeometry,
+    new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+  );
+  frontBox.position.set(0, 1.6, -3);
+  scene.add(frontBox);
+  
+  console.log("📐 Enhanced coordinate helpers added:");
+  console.log("  - LARGE red axis = X (left/right)");
+  console.log("  - LARGE green axis = Y (up/down)");
+  console.log("  - LARGE blue axis = Z (forward/back)");
   console.log("  - Grid = Ground plane (Y=0)");
-  console.log("  - Yellow sphere = Camera position");
-  console.log("  - Red wireframe = World origin (0,0,0)");
-  console.log("  - Green wireframe = Front of camera (0,1.6,0)");
-  console.log("  - Blue arrow = Camera forward direction");
+  console.log("  - YELLOW sphere = Camera position (0, 1.6, 5)");
+  console.log("  - RED sphere = World origin (0, 0, 0)");
+  console.log("  - GREEN sphere = Front at eye level (0, 1.6, 0)");
+  console.log("  - BLUE sphere = Right side (5, 1.6, 0)");
+  console.log("  - MAGENTA sphere = Left side (-5, 1.6, 0)");
+  console.log("  - CYAN arrow = Camera forward direction");
+  console.log("  - WHITE wireframe box = 3 units in front");
+  console.log("");
+  console.log("💡 If you don't see anything, try:");
+  console.log("   1. Turn your phone around slowly");
+  console.log("   2. Tilt phone up/down");
+  console.log("   3. The green sphere should be right in front of you!");
 }
 
 function createCan() {
