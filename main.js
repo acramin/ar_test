@@ -87,6 +87,31 @@ function startGame() {
   }
 }
 
+// function setupThreeJS() {
+//   scene = new THREE.Scene();
+//   camera = new THREE.PerspectiveCamera(
+//     70,
+//     window.innerWidth / window.innerHeight,
+//     0.1,
+//     1000
+//   );
+//   camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
+  
+//   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+//   renderer.setSize(window.innerWidth, window.innerHeight);
+//   renderer.setPixelRatio(window.devicePixelRatio);
+//   document.getElementById("canvas-container").appendChild(renderer.domElement);
+//   createCan();
+//   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+//   scene.add(ambientLight);
+//   const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+//   directionalLight.position.set(1, 1, 1);
+//   scene.add(directionalLight);
+//   const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+//   directionalLight2.position.set(-1, -1, -1);
+//   scene.add(directionalLight2);
+// }
+
 function setupThreeJS() {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(
@@ -95,12 +120,15 @@ function setupThreeJS() {
     0.1,
     1000
   );
-  camera.position.set(0, 1.6, 5); // Move camera UP to eye level (1.6m high)
-  
+  camera.position.set(0, 1.6, 5);
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
   document.getElementById("canvas-container").appendChild(renderer.domElement);
+  
+  // ADD COORDINATE SYSTEM HELPERS
+  addCoordinateHelpers();
+  
   createCan();
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
@@ -110,6 +138,61 @@ function setupThreeJS() {
   const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
   directionalLight2.position.set(-1, -1, -1);
   scene.add(directionalLight2);
+}
+
+function addCoordinateHelpers() {
+  // 1. AXES HELPER - Shows X (red), Y (green), Z (blue) axes
+  const axesHelper = new THREE.AxesHelper(5); // 5 units long
+  axesHelper.position.set(0, 0, 0); // At world origin
+  scene.add(axesHelper);
+  
+  // 2. GRID HELPER - Shows ground plane
+  const gridHelper = new THREE.GridHelper(20, 20, 0x00ff00, 0x404040);
+  gridHelper.position.y = 0; // At ground level
+  scene.add(gridHelper);
+  
+  // 3. CAMERA POSITION MARKER - Shows where camera is
+  const cameraMarkerGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+  const cameraMarkerMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const cameraMarker = new THREE.Mesh(cameraMarkerGeometry, cameraMarkerMaterial);
+  cameraMarker.position.copy(camera.position);
+  scene.add(cameraMarker);
+  
+  // 4. REFERENCE SPHERES at key positions
+  // Sphere at origin
+  const originSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
+  );
+  originSphere.position.set(0, 0, 0);
+  scene.add(originSphere);
+  
+  // Sphere in front of camera
+  const frontSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true })
+  );
+  frontSphere.position.set(0, 1.6, 0); // In front at eye level
+  scene.add(frontSphere);
+  
+  // 5. DIRECTION ARROWS from camera
+  const arrowHelper = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 0, -1), // Direction (forward)
+    camera.position,              // Origin (camera position)
+    3,                            // Length
+    0x0000ff                      // Color (blue)
+  );
+  scene.add(arrowHelper);
+  
+  console.log("📐 Coordinate helpers added:");
+  console.log("  - Red axis = X (left/right)");
+  console.log("  - Green axis = Y (up/down)");
+  console.log("  - Blue axis = Z (forward/back)");
+  console.log("  - Grid = Ground plane (Y=0)");
+  console.log("  - Yellow sphere = Camera position");
+  console.log("  - Red wireframe = World origin (0,0,0)");
+  console.log("  - Green wireframe = Front of camera (0,1.6,0)");
+  console.log("  - Blue arrow = Camera forward direction");
 }
 
 function createCan() {
