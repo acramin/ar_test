@@ -598,8 +598,8 @@ function animate() {
     
     // Limit gamma (roll) to prevent wild spinning when tilting phone sideways
     const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, gamma)); // Limit to ±45°
-    
-    camera.rotation.set(0, 0, 0, "YXZ");
+
+    camera.rotation.set(alpha, adjustedBeta, clampedGamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     // NO ANIMATION - can stays perfectly still at its original position
