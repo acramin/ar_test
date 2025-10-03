@@ -593,20 +593,20 @@ function restartCompleteGame() {
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
-    // Fix: Adjust beta to compensate for holding phone upright
-    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
+    // Apply sensitivity scaling to each axis
+    const adjustedAlpha = alpha * CAMERA_SENSITIVITY.alpha;
+    const adjustedBeta = (beta - Math.PI / 2) * CAMERA_SENSITIVITY.beta;
+    const adjustedGamma = gamma * CAMERA_SENSITIVITY.gamma;
     
-    // Limit gamma (roll) to prevent wild spinning when tilting phone sideways
-    const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, gamma)); // Limit to ±45°
+    // Optionally clamp gamma to prevent wild spinning
+    const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, adjustedGamma));
     
-    camera.rotation.set(0, 0, 0, "YXZ");
+    camera.rotation.set(adjustedBeta, adjustedAlpha, clampedGamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
-    // NO ANIMATION - can stays perfectly still at its original position
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
     can.visible = true;
     
-    // Debug: Log can position relative to camera
     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
     console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   } else if (can && (!gameStarted || gameCompleted)) {
