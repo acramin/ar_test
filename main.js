@@ -2,12 +2,6 @@
 // GAME CONFIGURATION - Change this number to set how many cans need to be found
 const CANS_TO_FIND = 3; // Easy to change for testing different amounts!
 
-const CAMERA_SENSITIVITY = {
-  alpha: 0.5,  // 10% of real rotation (compass/yaw)
-  beta: 0.5,   // 10% of real tilt (up/down)
-  gamma: 0.5   // 10% of real roll (sideways tilt)
-};
-
 // Main application variables
 let video, renderer, scene, camera, can;
 let alpha = 0,
@@ -21,9 +15,6 @@ let raycaster, mouse;
 let reticlePulseInterval;
 let gameStarted = false;
 let gameCompleted = false;
-let lastRawAlpha = null;
-let lastRawBeta = null;
-let lastRawGamma = null;
 
 // Initialize the application
 function init() {
@@ -379,61 +370,9 @@ function createCan2() {
 function setupDeviceOrientation() {
   if (window.DeviceOrientationEvent) {
     window.addEventListener("deviceorientation", (event) => {
-      const rawAlpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
-      const rawBeta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
-      const rawGamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
-      
-      // Initialize on first reading
-      if (lastRawAlpha === null) {
-        lastRawAlpha = rawAlpha;
-        lastRawBeta = rawBeta;
-        lastRawGamma = rawGamma;
-        alpha = rawAlpha;
-        beta = rawBeta;
-        gamma = rawGamma;
-        return;
-      }
-      
-      // Calculate deltas (changes since last frame)
-      let deltaAlpha = rawAlpha - lastRawAlpha;
-      let deltaBeta = rawBeta - lastRawBeta;
-      let deltaGamma = rawGamma - lastRawGamma;
-      
-      // Fix wrap-around for alpha (0° to 360°)
-      if (deltaAlpha > Math.PI) {
-        deltaAlpha -= 2 * Math.PI;
-      } else if (deltaAlpha < -Math.PI) {
-        deltaAlpha += 2 * Math.PI;
-      }
-      
-      // Fix wrap-around for beta (should rarely happen but just in case)
-      if (deltaBeta > Math.PI) {
-        deltaBeta -= 2 * Math.PI;
-      } else if (deltaBeta < -Math.PI) {
-        deltaBeta += 2 * Math.PI;
-      }
-      
-      // Fix wrap-around for gamma
-      if (deltaGamma > Math.PI) {
-        deltaGamma -= 2 * Math.PI;
-      } else if (deltaGamma < -Math.PI) {
-        deltaGamma += 2 * Math.PI;
-      }
-      
-      // Apply sensitivity to the DELTAS (this dampens the speed of rotation)
-      deltaAlpha *= CAMERA_SENSITIVITY.alpha;
-      deltaBeta *= CAMERA_SENSITIVITY.beta;
-      deltaGamma *= CAMERA_SENSITIVITY.gamma;
-      
-      // Add dampened deltas to current rotation
-      alpha += deltaAlpha;
-      beta += deltaBeta;
-      gamma += deltaGamma;
-      
-      // Update last values
-      lastRawAlpha = rawAlpha;
-      lastRawBeta = rawBeta;
-      lastRawGamma = rawGamma;
+      alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+      beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
     });
   } else {
     alert(
@@ -654,18 +593,20 @@ function restartCompleteGame() {
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
-    // No more sensitivity multiplier here - it's already applied in setupDeviceOrientation
-    const adjustedBeta = beta - Math.PI / 2; // Just adjust for upright phone
+    // Fix: Adjust beta to compensate for holding phone upright
+    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
     
-    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
+    // Limit gamma (roll) to prevent wild spinning when tilting phone sideways
+    const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, gamma)); // Limit to ±45°
     
-    // Debug logging
-    console.log(`Alpha: ${(alpha * 180 / Math.PI).toFixed(1)}°`);
+    camera.rotation.set(0, 0, 0, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
+    // NO ANIMATION - can stays perfectly still at its original position
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
     can.visible = true;
     
+    // Debug: Log can position relative to camera
     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
     console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
   } else if (can && (!gameStarted || gameCompleted)) {
