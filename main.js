@@ -127,7 +127,7 @@ function setupThreeJS() {
   document.getElementById("canvas-container").appendChild(renderer.domElement);
   
   // ADD COORDINATE SYSTEM HELPERS
-  // addCoordinateHelpers(); // Disabled as requested
+  addCoordinateHelpers(); // Disabled as requested
   
   createCan();
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
