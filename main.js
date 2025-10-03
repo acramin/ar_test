@@ -127,7 +127,7 @@ function setupThreeJS() {
   document.getElementById("canvas-container").appendChild(renderer.domElement);
   
   // ADD COORDINATE SYSTEM HELPERS
-  addCoordinateHelpers();
+  addCoordinateHelpers(); // Disabled as requested
   
   createCan();
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -596,7 +596,7 @@ function animate() {
     // Fix: Adjust beta to compensate for holding phone upright
     // When phone is upright, beta ≈ 0, but we want camera to look forward
     const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
-    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
+    // camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ"); // Removed to prevent camera rotation with device orientation
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     // NO ANIMATION - can stays perfectly still at its original position
