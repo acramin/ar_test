@@ -21,9 +21,9 @@ let raycaster, mouse;
 let reticlePulseInterval;
 let gameStarted = false;
 let gameCompleted = false;
-let lastAlpha = 0;
-let cumulativeAlpha = 0;
-let alphaInitialized = false;
+let lastRawAlpha = null;
+let lastRawBeta = null;
+let lastRawGamma = null;
 
 // Initialize the application
 function init() {
@@ -380,30 +380,60 @@ function setupDeviceOrientation() {
   if (window.DeviceOrientationEvent) {
     window.addEventListener("deviceorientation", (event) => {
       const rawAlpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
-      beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
-      gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+      const rawBeta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+      const rawGamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
       
-      // Handle alpha wrapping (0° to 360° issue)
-      if (!alphaInitialized) {
-        lastAlpha = rawAlpha;
-        cumulativeAlpha = rawAlpha;
-        alphaInitialized = true;
-      } else {
-        // Calculate the difference
-        let diff = rawAlpha - lastAlpha;
-        
-        // Handle wrap-around at 0°/360°
-        if (diff > Math.PI) {
-          diff -= 2 * Math.PI; // Wrapped from 360° to 0°
-        } else if (diff < -Math.PI) {
-          diff += 2 * Math.PI; // Wrapped from 0° to 360°
-        }
-        
-        cumulativeAlpha += diff;
-        lastAlpha = rawAlpha;
+      // Initialize on first reading
+      if (lastRawAlpha === null) {
+        lastRawAlpha = rawAlpha;
+        lastRawBeta = rawBeta;
+        lastRawGamma = rawGamma;
+        alpha = rawAlpha;
+        beta = rawBeta;
+        gamma = rawGamma;
+        return;
       }
       
-      alpha = cumulativeAlpha;
+      // Calculate deltas (changes since last frame)
+      let deltaAlpha = rawAlpha - lastRawAlpha;
+      let deltaBeta = rawBeta - lastRawBeta;
+      let deltaGamma = rawGamma - lastRawGamma;
+      
+      // Fix wrap-around for alpha (0° to 360°)
+      if (deltaAlpha > Math.PI) {
+        deltaAlpha -= 2 * Math.PI;
+      } else if (deltaAlpha < -Math.PI) {
+        deltaAlpha += 2 * Math.PI;
+      }
+      
+      // Fix wrap-around for beta (should rarely happen but just in case)
+      if (deltaBeta > Math.PI) {
+        deltaBeta -= 2 * Math.PI;
+      } else if (deltaBeta < -Math.PI) {
+        deltaBeta += 2 * Math.PI;
+      }
+      
+      // Fix wrap-around for gamma
+      if (deltaGamma > Math.PI) {
+        deltaGamma -= 2 * Math.PI;
+      } else if (deltaGamma < -Math.PI) {
+        deltaGamma += 2 * Math.PI;
+      }
+      
+      // Apply sensitivity to the DELTAS (this dampens the speed of rotation)
+      deltaAlpha *= CAMERA_SENSITIVITY.alpha;
+      deltaBeta *= CAMERA_SENSITIVITY.beta;
+      deltaGamma *= CAMERA_SENSITIVITY.gamma;
+      
+      // Add dampened deltas to current rotation
+      alpha += deltaAlpha;
+      beta += deltaBeta;
+      gamma += deltaGamma;
+      
+      // Update last values
+      lastRawAlpha = rawAlpha;
+      lastRawBeta = rawBeta;
+      lastRawGamma = rawGamma;
     });
   } else {
     alert(
@@ -624,16 +654,13 @@ function restartCompleteGame() {
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
-    // Apply sensitivity scaling to each axis
-    const adjustedAlpha = alpha * CAMERA_SENSITIVITY.alpha;
-    const adjustedBeta = (beta - Math.PI / 2) * CAMERA_SENSITIVITY.beta;
-    const adjustedGamma = gamma * CAMERA_SENSITIVITY.gamma;
+    // No more sensitivity multiplier here - it's already applied in setupDeviceOrientation
+    const adjustedBeta = beta - Math.PI / 2; // Just adjust for upright phone
     
-    // Set camera rotation
-    camera.rotation.set(adjustedBeta, adjustedAlpha, adjustedGamma, "YXZ");
+    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
     
-    // Log the raw and adjusted values for debugging
-    console.log(`Alpha: ${(alpha * 180 / Math.PI).toFixed(1)}° → ${(adjustedAlpha * 180 / Math.PI).toFixed(1)}°`);
+    // Debug logging
+    console.log(`Alpha: ${(alpha * 180 / Math.PI).toFixed(1)}°`);
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     can.position.set(canPosition.x, canPosition.y, canPosition.z);
