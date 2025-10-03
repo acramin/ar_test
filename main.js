@@ -3,9 +3,9 @@
 const CANS_TO_FIND = 3; // Easy to change for testing different amounts!
 
 const CAMERA_SENSITIVITY = {
-  alpha: 0.1,  // 10% of real rotation (compass/yaw)
-  beta: 0.1,   // 10% of real tilt (up/down)
-  gamma: 0.1   // 10% of real roll (sideways tilt)
+  alpha: 0.5,  // 10% of real rotation (compass/yaw)
+  beta: 0.5,   // 10% of real tilt (up/down)
+  gamma: 0.5   // 10% of real roll (sideways tilt)
 };
 
 // Main application variables
