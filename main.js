@@ -594,9 +594,12 @@ function animate() {
   requestAnimationFrame(animate);
   if (camera) {
     // Fix: Adjust beta to compensate for holding phone upright
-    // When phone is upright, beta ≈ 0, but we want camera to look forward
     const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
-    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
+    
+    // Limit gamma (roll) to prevent wild spinning when tilting phone sideways
+    const clampedGamma = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, gamma)); // Limit to ±45°
+    
+    camera.rotation.set(adjustedBeta, alpha, clampedGamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     // NO ANIMATION - can stays perfectly still at its original position
