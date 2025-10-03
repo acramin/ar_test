@@ -567,21 +567,21 @@ function restartCompleteGame() {
   console.log("Game restarted - looking for", CANS_TO_FIND, "cans again!");
 }
 
+
+
 // function animate() {
 //   requestAnimationFrame(animate);
 //   if (camera) {
 //     camera.rotation.set(beta, alpha, gamma, "YXZ");
 //   }
 //   if (can && !foundCan && gameStarted && !gameCompleted) {
-//     can.userData.floatTime += 0.01;
-//     // Keep the floating effect but relative to the original position
-//     can.position.z = canPosition.y + Math.sin(can.userData.floatTime) * 0.1;
-//     can.rotation.z += 0.01;
+//     // NO ANIMATION - can stays perfectly still at its original position
+//     can.position.set(canPosition.x, canPosition.y, canPosition.z);
 //     can.visible = true;
     
 //     // Debug: Log can position relative to camera
 //     console.log(`Can at: x=${can.position.x.toFixed(1)}, y=${can.position.y.toFixed(1)}, z=${can.position.z.toFixed(1)}`);
-//     console.log(`Camera at: x=0, y=0, z=5`);
+//     console.log(`Camera position: x=${camera.position.x.toFixed(1)}, y=${camera.position.y.toFixed(1)}, z=${camera.position.z.toFixed(1)}`);
 //   } else if (can && (!gameStarted || gameCompleted)) {
 //     can.visible = false;
 //   }
@@ -593,7 +593,10 @@ function restartCompleteGame() {
 function animate() {
   requestAnimationFrame(animate);
   if (camera) {
-    camera.rotation.set(beta, alpha, gamma, "YXZ");
+    // Fix: Adjust beta to compensate for holding phone upright
+    // When phone is upright, beta ≈ 0, but we want camera to look forward
+    const adjustedBeta = beta - Math.PI / 2; // Subtract 90 degrees
+    camera.rotation.set(adjustedBeta, alpha, gamma, "YXZ");
   }
   if (can && !foundCan && gameStarted && !gameCompleted) {
     // NO ANIMATION - can stays perfectly still at its original position
